@@ -1,0 +1,14 @@
+.vscode/**/*.*
+
+terraform/aws/cert.pem
+terraform/aws/ccloud.auto.tfvars
+terraform/aws/alexa.auto.tfvars
+terraform/aws/.terraform
+terraform/aws/terraform.tfstate
+terraform/aws/terraform.tfstate.backup
+terraform/aws/.terraform.tfstate.lock.info
+
+redis-sink/go.sum
+scoreboard/go.sum
+pipeline/ksql-server.properties
+scoreboard/ccloud.properties

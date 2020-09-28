@@ -1,0 +1,111 @@
+= Streaming Pac-Man
+
+:imagesdir: images/
+
+*Streaming Pac-Man* is the funniest application that you ever see while applying principles of streaming data using https://kafka.apache.org[Apache Kafka]. Built around the famous Pac-Man game this application ingest and store events from the game into Kafka topics and allow you to process them in near real-time using https://ksqldb.io/[ksqlDB]. In order to keep you focused this application is based on https://aws.amazon.com/msk/[AWS MSK] — an fully managed service for Apache Kafka that handles that infrastructure heavy lifiting for you.
+
+image::pacman-game.png[]
+
+To implement streaming analytics in the game you are going to build a link:pipeline/queries.sql[scoreboard using ksqlDB]. The scoreboard will be a table containing aggregated metrics of the players such as their highest score, the highest level achieved, and the number of times that the player loses. As new events arrive the scoreboard gets instantly updated by the continuous queries that keep processing those events as they happen.
+
+== What you are going to need?
+
+* *Terraform* - The application is automatically created using https://www.terraform.io[Terraform]. Besides having Terraform installed locally, you will need to provide your AWS credentials so Terraform can create and manage the resources for you.
+* *Java and Maven* - The UI layer of the application relies on two APIs that are implemented using https://openjdk.java.net/[Java], therefore you will need to have Java 11+ installed to build the source-code. The build itseld is implemented using https://maven.apache.org/[Maven], and it is triggered automatically by Terraform.
+* *Docker (Optional)* - The backend of some of the APIs is based on Redis. In order to keep Redis up-to-date with the data stored in Kafka, the application uses a sink service implemented as a Docker application. Its Docker image has been published on https://hub.docker.com/r/riferrei/redis-sink[Docker Hub] so there is no need for you to worry about this. However, if you want to use your own Docker image -- you will need to build a new image using this link:redis-sink/[code] and push it to some Docker repository. Also, you will need to modify the Terraform variable named `redis_sink_image`.
+* *Confluent Platform (Optional)* - The pipeline implementation has some example events that can be used to test the pipeline code before you deploy it. This can be acomplished by using the https://docs.confluent.io/current/ksql/docs/developer-guide/ksql-testing-tool.html[KSQL Testing Tool] that is part of Confluent Platform. If you plan to use this tool keep in mind that the Confluent Platform is not free and you ought to use their developer edition of the software to be complaint. You can find instructions about how to install it https://www.confluent.io/product/confluent-platform/[here].
+
+== Deploying the application
+
+The application is essentially a set of link:pacman/[HTML/CSS/JS files] that forms a microsite that can be hosted statically anywhere. But for the sake of coolness we will deploy this microsite in a S3 bucket from AWS. The application will emit events that will be processed by a event handler implemented as an API Gateway which uses a Lambda function as backend. This event handler API receives the events and writes them into the respective Kafka topics.
+
+image::pac-man-arch.png[align="left"]
+
+Please note that during deployment, the API takes care of creating the required Kafka topics. Therefore, there is no need to manually create them.
+
+1. Enter the folder that contains the AWS code
++
+[source,bash]
+----
+cd terraform/aws
+----
+
+2. Initialize the Terraform plugins
++
+[source,bash]
+----
+terraform init
+----
+
+3. Start the application deployment
++
+[source,bash]
+----
+terraform apply
+----
+
+4. Output with endpoints will be shown
++
+[source,bash]
+----
+Outputs:
+
+ksqlDB = http://streaming-pacman00000-ksqldb.region.elb.amazonaws.com
+Pacman = http://streaming-pacman00000.s3-website-region.amazonaws.com
+----
+
+*Note:* When you are done with the application, you can automatically destroy all the resources created by Terraform using the command below:
+
+[source,bash]
+----
+terraform destroy
+----
+
+== Creating the pipeline
+
+When users play with the Pac-Man game two types of events will be generated. One is called *User Game* and contains the data about the user's current game such as their score, current level, and the number of lives. The other is called *User Losses* and as the name implies contains data about whether the user lose in the game. To build a scoreboard out of this a streaming analytics pipeline will be created to transform these raw events into a table with the scoreboard that is updated in near real-time.
+
+image::pipeline.png[]
+
+To implement the pipeline you will be using ksqlDB. The link:pipeline/queries.sql[code for this pipeline has been written for you] and the only thing you need to do is to deploy it into a full-fledged ksqlDB Server.
+
+1. Enter the folder that contains the AWS code
++
+[source,bash]
+----
+cd terraform/aws
+----
+
+2. Execute the command to print the outputs
++
+[source,bash]
+----
+terraform output
+----
+
+3. Select and copy the ksqlDB Server endpoint
+
+4. Enter the folder that contains the code
++
+[source,bash]
+----
+cd ../../pipeline
+----
+
+5. Start a new session of the ksqlDB CLI:
++
+[source,bash]
+----
+ksql <ENDPOINT_COPIED_ON_STEP_THREE>
+----
+
+6. Run the queries in the ksqlDB CLI session:
++
+[source,bash]
+----
+RUN SCRIPT 'queries.sql';
+----
+
+== License
+
+This project is licensed under the link:LICENSE[Apache 2.0 License.]
