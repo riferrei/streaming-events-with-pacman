@@ -2,7 +2,7 @@
 
 :imagesdir: images/
 
-*Streaming Pac-Man* is the funniest application that you ever see while applying principles of streaming data using https://kafka.apache.org[Apache Kafka]. Built around the famous Pac-Man game this application ingest and store events from the game into Kafka topics and allow you to process them in near real-time using https://ksqldb.io/[ksqlDB]. In order to keep you focused this application is based on https://aws.amazon.com/msk/[AWS MSK] — an fully managed service for Apache Kafka that handles that infrastructure heavy lifiting for you.
+*Streaming Pac-Man* is the funniest application that you ever see while applying principles of streaming data using https://kafka.apache.org[Apache Kafka]. Built around the famous Pac-Man game this application ingest and store events from the game into Kafka topics and allow you to process them in near real-time using https://ksqldb.io/[ksqlDB]. In order to keep you focused in the application details this project is based on several fully managed services from AWS such as https://aws.amazon.com/msk[Managed Streaming for Apache Kafka], https://aws.amazon.com/elasticache/redis[ElastiCache for Redis], and https://aws.amazon.com/ecs[Elastic Container Service] that does the infrastructure heavy lifting for you.
 
 image::pacman-game.png[]
 
