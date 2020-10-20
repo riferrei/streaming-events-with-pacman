@@ -29,7 +29,8 @@
 		<script type="text/javascript">		
 
 			function checkName() {
-				if (window.name == null | window.name.length == 0) {
+				var user = localStorage.getItem("user");
+				if (user == null | user.length == 0) {
 					window.location.href = "index.html";
 				}
 			}

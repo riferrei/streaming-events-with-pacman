@@ -1,3 +1,4 @@
+var USER = localStorage.getItem("user");
 var KEYDOWN = false;
 var PAUSE = false;
 var LOCK = false;
@@ -79,7 +80,7 @@ function initGame(newGame) {
 			doInitGame(newGame, lastScore, lastLevel);
 		}
 	};
-	var player = window.name;
+	var player = USER;
 	var uri = SCOREBOARD_API + '?player=' + player
 	request.open('POST', uri, true);
 	request.send();
@@ -347,7 +348,7 @@ function lifes(l) {
 
 	// Emit event 'USER_GAME' event
 	var record = {};
-	record.user = window.name;
+	record.user = USER;
 	record.game = {}
 	record.game.score = SCORE
 	record.game.lives = LIFES
@@ -379,7 +380,7 @@ function gameover() {
 
 	// Emit event 'USER_LOSSES' event
 	var record = {};
-	record.user = window.name;
+	record.user = USER;
 	produceRecord('USER_LOSSES', record);
 
 	// Terminate the web worker that
@@ -439,7 +440,7 @@ function score(s, type) {
 
 	// Emit event 'USER_GAME' event
 	var record = {};
-	record.user = window.name;
+	record.user = USER;
 	record.game = {}
 	record.game.score = SCORE
 	record.game.lives = LIFES

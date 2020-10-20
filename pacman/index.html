@@ -21,8 +21,9 @@
     <script>
 
         function checkName() {
-            if (window.name != null | window.name.length > 0) {
-                document.getElementById("user").value = window.name;
+            var user = localStorage.getItem("user");
+            if (user != null | user.length > 0) {
+                document.getElementById("user").value = user;
             }
         }
 
@@ -38,7 +39,9 @@
                 alert('You need to provide a name.');
                 return;
             }
-            window.name = user;
+            if (localStorage) {
+                localStorage.setItem("user", user);
+            }
             window.location.href = "start.html";
         }
 
