@@ -11,7 +11,7 @@ resource "random_string" "random_string" {
 }
 
 data "template_file" "bucket_pacman" {
-  template = "${var.global_prefix}${random_string.random_string.result}"
+  template = "${var.global_prefix}"
 }
 
 resource "aws_s3_bucket" "pacman" {
