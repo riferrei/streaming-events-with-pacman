@@ -61,11 +61,22 @@ resource "aws_s3_bucket_object" "error" {
   source = "../../pacman/error.html"
 }
 
+data "template_file" "start" {
+  template = file("../../pacman/start.html")
+  vars = {
+    start_title = var.start_title
+    blinky_alias = var.blinky_alias
+    pinky_alias = var.pinky_alias
+    inky_alias = var.inky_alias
+    clyde_alias = var.clyde_alias
+  }
+}
+
 resource "aws_s3_bucket_object" "start" {
   bucket = aws_s3_bucket.pacman.bucket
   key = "start.html"
   content_type = "text/html"
-  source = "../../pacman/start.html"
+  content = data.template_file.start.rendered
 }
 
 resource "aws_s3_bucket_object" "webmanifest" {

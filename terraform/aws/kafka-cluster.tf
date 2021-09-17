@@ -9,7 +9,7 @@ resource "aws_cloudwatch_log_group" "kafka_cluster_log_group" {
 resource "aws_msk_cluster" "kafka_cluster" {
 
   cluster_name = "${var.global_prefix}-kafka-cluster"
-  kafka_version = "2.4.1.1"
+  kafka_version = "2.8.0"
   number_of_broker_nodes = 3
 
   broker_node_group_info {
