@@ -1,8 +1,7 @@
 .vscode/**/*.*
 
 terraform/aws/cert.pem
-terraform/aws/ccloud.auto.tfvars
-terraform/aws/alexa.auto.tfvars
+terraform/aws/vars.auto.tfvars
 terraform/aws/.terraform
 terraform/aws/terraform.tfstate
 terraform/aws/terraform.tfstate.backup
