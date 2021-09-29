@@ -33,6 +33,11 @@ variable "pacman_players_skill_id" {
   default = ""
 }
 
+variable "elastic_cloud_api_key" {
+  type = string
+  default = ""
+}
+
 variable "global_prefix" {
   type = string
   default = "streaming-pacman"
