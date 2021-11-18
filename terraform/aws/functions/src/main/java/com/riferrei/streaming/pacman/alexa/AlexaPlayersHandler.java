@@ -68,6 +68,7 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
                 .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
                 .setAttribute(SemanticAttributes.DB_OPERATION, "zcard")
                 .setAttribute(SemanticAttributes.DB_STATEMENT, "zcard")
+                .setAttribute("cache-name", SCOREBOARD_CACHE)
                 .startSpan();
             try (Scope childScope = rediszcard.makeCurrent()) {
                 if (cacheServer.zcard(SCOREBOARD_CACHE) == 0) {
@@ -122,6 +123,7 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
             .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
             .setAttribute(SemanticAttributes.DB_OPERATION, "zrevrange")
             .setAttribute(SemanticAttributes.DB_STATEMENT, "zrevrange")
+            .setAttribute("cache-name", SCOREBOARD_CACHE)
             .startSpan();
         try (Scope scope = redisRevRange.makeCurrent()) {
             bestPlayerKey = cacheServer.zrevrange(SCOREBOARD_CACHE, 0, 0);
@@ -134,9 +136,11 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
             .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
             .setAttribute(SemanticAttributes.DB_OPERATION, "get")
             .setAttribute(SemanticAttributes.DB_STATEMENT, "get")
+            .setAttribute("string-key", key)
             .startSpan();
         try (Scope scope = redisGet.makeCurrent()) {
             value = cacheServer.get(key);
+            redisGet.setAttribute("string-value", value);
         } finally {
             redisGet.end();
         }
@@ -156,6 +160,7 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
             .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
             .setAttribute(SemanticAttributes.DB_OPERATION, "zcard")
             .setAttribute(SemanticAttributes.DB_STATEMENT, "zcard")
+            .setAttribute("cache-name", SCOREBOARD_CACHE)
             .startSpan();
         try (Scope scope = rediszcard.makeCurrent()) {
             playersAvailable = cacheServer.zcard(SCOREBOARD_CACHE);
@@ -170,6 +175,7 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
                 .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
                 .setAttribute(SemanticAttributes.DB_OPERATION, "zrevrange")
                 .setAttribute(SemanticAttributes.DB_STATEMENT, "zrevrange")
+                .setAttribute("cache-name", SCOREBOARD_CACHE)
                 .startSpan();
             try (Scope scope = rediszrevRange.makeCurrent()) {
                 playerKeys = cacheServer.zrevrange(SCOREBOARD_CACHE, 0, topNPlayers - 1);
@@ -179,7 +185,7 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
 
             List<Player> players = new ArrayList<>(playerKeys.size());
             for (String key : playerKeys) {
-                
+
                 Span redisGet = tracer.spanBuilder("redis-get")
                     .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
                     .setAttribute(SemanticAttributes.DB_OPERATION, "get")
