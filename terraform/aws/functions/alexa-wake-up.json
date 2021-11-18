@@ -12,7 +12,7 @@
         "type": "IntentRequest",
         "locale": "en-US",
         "intent": {
-            "name": "BestPlayerIntent",
+            "name": "HelpIntent",
             "confirmationStatus": "NONE"
         }
     }

@@ -4,6 +4,8 @@ import com.amazon.ask.dispatcher.request.handler.HandlerInput;
 import com.amazon.ask.model.Response;
 import com.amazon.ask.request.handler.GenericRequestHandler;
 
+import io.opentelemetry.api.trace.Tracer;
+
 import static com.amazon.ask.request.Predicates.intentName;
 
 import java.util.Optional;
@@ -13,6 +15,12 @@ import static com.riferrei.streaming.pacman.utils.Constants.*;
 import static com.riferrei.streaming.pacman.utils.SkillUtils.*;
 
 public class AlexaHelpHandler implements GenericRequestHandler<HandlerInput, Optional<Response>> {
+
+    private Tracer tracer;
+
+    public AlexaHelpHandler(Tracer tracer) {
+        this.tracer = tracer;
+    }
 
     @Override
     public boolean canHandle(HandlerInput input) {

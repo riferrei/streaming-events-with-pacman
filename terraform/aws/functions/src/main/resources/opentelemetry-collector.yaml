@@ -1,0 +1,22 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+      grpc:
+
+exporters:
+  logging:
+    loglevel: debug
+  otlp/elastic:
+    endpoint: "${ELASTIC_OTLP_ENDPOINT}"
+    headers:
+      Authorization: "Bearer ${ELASTIC_OTLP_TOKEN}"
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [logging, otlp/elastic]
+    metrics:
+      receivers: [otlp]
+      exporters: [logging, otlp/elastic]

@@ -14,6 +14,11 @@ import com.amazon.ask.model.Response;
 import com.amazon.ask.model.Slot;
 
 import com.riferrei.streaming.pacman.utils.Player;
+
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.attributes.SemanticAttributes;
+import io.opentelemetry.context.Scope;
 import redis.clients.jedis.Jedis;
 
 import static com.amazon.ask.request.Predicates.intentName;
@@ -21,6 +26,12 @@ import static com.riferrei.streaming.pacman.utils.Constants.*;
 import static com.riferrei.streaming.pacman.utils.SkillUtils.*;
 
 public class AlexaPlayersHandler implements IntentRequestHandler {
+
+    private Tracer tracer;
+
+    public AlexaPlayersHandler(Tracer tracer) {
+        this.tracer = tracer;
+    }
 
     @Override
     public boolean canHandle(HandlerInput input, IntentRequest intentRequest) {
@@ -31,28 +42,69 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
     @Override
     public Optional<Response> handle(HandlerInput input, IntentRequest intentRequest) {
 
-        cacheServer.connect();
         String speechText = null;
-        ResourceBundle resourceBundle =
-            getResourceBundle(input);
+        ResourceBundle resourceBundle = getResourceBundle(input);
 
-        if (cacheServer.zcard(SCOREBOARD_CACHE) == 0) {
-            speechText = resourceBundle.getString(NO_PLAYERS);
-            return input.getResponseBuilder()
-                .withSpeech(speechText)
-                .build();
-        }
-        
-        if (input.matches(intentName(BEST_PLAYER_INTENT))) {
-            speechText = getBestPlayer(resourceBundle);
-        } else if (input.matches(intentName(TOPN_PLAYERS_INTENT))) {
-            Map<String, Slot> slots = intentRequest.getIntent().getSlots();
-            Slot slot = slots.get(NUMBER_OF_PLAYERS_SLOT);
-            int topNPlayers = 1;
-            try {
-                topNPlayers = Integer.parseInt(slot.getValue());
-            } catch (NumberFormatException nfe) {}
-            speechText = getTopNPlayers(topNPlayers, resourceBundle);
+        Span alexaPlayersHandler = tracer.spanBuilder("alexa-players-handler")
+            .setAttribute("intent-request-id", intentRequest.getRequestId())
+            .setAttribute("intent-name", intentRequest.getIntent().getName())
+            .setAttribute("intent-confirmation-status", intentRequest.getIntent().getConfirmationStatusAsString())
+            .setAttribute("intent-slots", intentRequest.getIntent().getSlots().toString())
+            .startSpan();
+        try (Scope scope = alexaPlayersHandler.makeCurrent()) {
+
+            Span redisConnect = tracer.spanBuilder("redis-connect")
+                .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+                .setAttribute(SemanticAttributes.DB_OPERATION, "connect")
+                .setAttribute(SemanticAttributes.DB_STATEMENT, "connect")
+                .startSpan();
+            try (Scope childScope = redisConnect.makeCurrent()) {
+                cacheServer.connect();
+            } finally {
+                redisConnect.end();
+            }
+
+            Span rediszcard = tracer.spanBuilder("redis-zcard")
+                .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+                .setAttribute(SemanticAttributes.DB_OPERATION, "zcard")
+                .setAttribute(SemanticAttributes.DB_STATEMENT, "zcard")
+                .startSpan();
+            try (Scope childScope = rediszcard.makeCurrent()) {
+                if (cacheServer.zcard(SCOREBOARD_CACHE) == 0) {
+                    speechText = resourceBundle.getString(NO_PLAYERS);
+                    return input.getResponseBuilder()
+                        .withSpeech(speechText)
+                        .build();
+                }
+            } finally {
+                rediszcard.end();
+            }
+            
+            if (input.matches(intentName(BEST_PLAYER_INTENT))) {
+                Span bestPlayerSpan = tracer.spanBuilder("get-best-player").startSpan();
+                try (Scope childScope = bestPlayerSpan.makeCurrent()) {
+                    speechText = getBestPlayer(resourceBundle);
+                } finally {
+                    bestPlayerSpan.end();
+                }
+            } else if (input.matches(intentName(TOPN_PLAYERS_INTENT))) {
+                Map<String, Slot> slots = intentRequest.getIntent().getSlots();
+                Slot slot = slots.get(NUMBER_OF_PLAYERS_SLOT);
+                int topNPlayers = 1;
+                try {
+                    topNPlayers = Integer.parseInt(slot.getValue());
+                } catch (NumberFormatException nfe) {}
+                Span topNPlayersSpan = tracer.spanBuilder("get-topn-players").startSpan();
+                topNPlayersSpan.setAttribute("topNPlayers", topNPlayers);
+                try (Scope childScope = topNPlayersSpan.makeCurrent()) {
+                    speechText = getTopNPlayers(topNPlayers, resourceBundle);
+                } finally {
+                    topNPlayersSpan.end();
+                }
+            }
+
+        } finally {
+            alexaPlayersHandler.end();
         }
 
         return input.getResponseBuilder()
@@ -65,9 +117,29 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
         
         final StringBuilder speechText = new StringBuilder();
 
-        Set<String> bestPlayerKey = cacheServer.zrevrange(SCOREBOARD_CACHE, 0, 0);
+        Set<String> bestPlayerKey = null;
+        Span redisRevRange = tracer.spanBuilder("redis-revrange")
+            .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+            .setAttribute(SemanticAttributes.DB_OPERATION, "zrevrange")
+            .setAttribute(SemanticAttributes.DB_STATEMENT, "zrevrange")
+            .startSpan();
+        try (Scope scope = redisRevRange.makeCurrent()) {
+            bestPlayerKey = cacheServer.zrevrange(SCOREBOARD_CACHE, 0, 0);
+        } finally {
+            redisRevRange.end();
+        }
         String key = bestPlayerKey.iterator().next();
-        String value = cacheServer.get(key);
+        String value = null;
+        Span redisGet = tracer.spanBuilder("redis-get")
+            .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+            .setAttribute(SemanticAttributes.DB_OPERATION, "get")
+            .setAttribute(SemanticAttributes.DB_STATEMENT, "get")
+            .startSpan();
+        try (Scope scope = redisGet.makeCurrent()) {
+            value = cacheServer.get(key);
+        } finally {
+            redisGet.end();
+        }
         Player player = Player.getPlayer(key, value);
         String text = resourceBundle.getString(BEST_PLAYER);
         speechText.append(String.format(text, player.getUser()));
@@ -79,16 +151,48 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
     private String getTopNPlayers(int topNPlayers, ResourceBundle resourceBundle) {
 
         final StringBuilder speechText = new StringBuilder();
-        long playersAvailable = cacheServer.zcard(SCOREBOARD_CACHE);
+        long playersAvailable = 0;
+        Span rediszcard = tracer.spanBuilder("redis-zcard")
+            .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+            .setAttribute(SemanticAttributes.DB_OPERATION, "zcard")
+            .setAttribute(SemanticAttributes.DB_STATEMENT, "zcard")
+            .startSpan();
+        try (Scope scope = rediszcard.makeCurrent()) {
+            playersAvailable = cacheServer.zcard(SCOREBOARD_CACHE);
+        } finally {
+            rediszcard.end();
+        }
 
         if (playersAvailable >= topNPlayers) {
 
-            Set<String> playerKeys = cacheServer.zrevrange(
-                SCOREBOARD_CACHE, 0, topNPlayers - 1);
+            Set<String> playerKeys = null;
+            Span rediszrevRange = tracer.spanBuilder("redis-zrevrange")
+                .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+                .setAttribute(SemanticAttributes.DB_OPERATION, "zrevrange")
+                .setAttribute(SemanticAttributes.DB_STATEMENT, "zrevrange")
+                .startSpan();
+            try (Scope scope = rediszrevRange.makeCurrent()) {
+                playerKeys = cacheServer.zrevrange(SCOREBOARD_CACHE, 0, topNPlayers - 1);
+            } finally {
+                rediszrevRange.end();
+            }
+
             List<Player> players = new ArrayList<>(playerKeys.size());
             for (String key : playerKeys) {
+                
+                Span redisGet = tracer.spanBuilder("redis-get")
+                    .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+                    .setAttribute(SemanticAttributes.DB_OPERATION, "get")
+                    .setAttribute(SemanticAttributes.DB_STATEMENT, "get")
+                    .setAttribute("string-key", key)
+                    .startSpan();
+
                 String value = cacheServer.get(key);
+                redisGet.setAttribute("string-value", value);
                 players.add(Player.getPlayer(key, value));
+
+                redisGet.end();
+
             }
 
             String and = resourceBundle.getString(AND);

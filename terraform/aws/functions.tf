@@ -504,20 +504,30 @@ resource "aws_lambda_function" "alexa_handler_function" {
   depends_on = [
     null_resource.build_functions,
     aws_iam_role.alexa_handler_role,
-    aws_elasticache_replication_group.cache_server]
+    aws_elasticache_replication_group.cache_server,
+    ec_deployment.elasticsearch]
   function_name = "alexa_handler"
   description = "Backend function for the Alexa Handler API"
   filename = "functions/deploy/streaming-pacman-1.0.jar"
-  handler = "com.riferrei.streaming.pacman.AlexaHandler"
+  handler = "com.riferrei.streaming.pacman.AlexaHandler::handleRequest"
   role = aws_iam_role.alexa_handler_role[0].arn
   runtime = "java11"
-  memory_size = 256
+  memory_size = 512
   timeout = 60
   environment {
     variables = {
       CACHE_SERVER_HOST = aws_elasticache_replication_group.cache_server.primary_endpoint_address
       CACHE_SERVER_PORT = aws_elasticache_replication_group.cache_server.port
+      AWS_LAMBDA_EXEC_WRAPPER = "/opt/otel-stream-handler"
+      ELASTIC_OTLP_ENDPOINT = ec_deployment.elasticsearch.apm[0].https_endpoint
+      ELASTIC_OTLP_TOKEN = ec_deployment.elasticsearch.apm_secret_token
+      OPENTELEMETRY_COLLECTOR_CONFIG_FILE = "/var/task/opentelemetry-collector.yaml"
+      OTEL_PROPAGATORS = "tracecontext, baggage"
     }
+  }
+  layers = ["arn:aws:lambda:us-east-1:901920570463:layer:aws-otel-java-wrapper-ver-1-7-0:1"]
+  tracing_config {
+    mode = "PassThrough"
   }
   vpc_config {
     security_group_ids = [aws_security_group.cache_server.id]
@@ -540,19 +550,19 @@ resource "aws_lambda_permission" "alexa_winner_cloudwatch_trigger" {
   action = "lambda:InvokeFunction"
   principal = "events.amazonaws.com"
   function_name = aws_lambda_function.alexa_handler_function[0].function_name
-  source_arn = aws_cloudwatch_event_rule.alexa_handler_every_minute[0].arn
+  source_arn = aws_cloudwatch_event_rule.alexa_handler_every_five_minutes[0].arn
 }
 
-resource "aws_cloudwatch_event_rule" "alexa_handler_every_minute" {
+resource "aws_cloudwatch_event_rule" "alexa_handler_every_five_minutes" {
   count = var.alexa_enabled == true ? 1 : 0
   name = "execute-alexa-handler-every-minute"
-  description = "Execute the alexa handler function every minute"
-  schedule_expression = "rate(1 minute)"
+  description = "Execute the alexa handler function every 5 minutes"
+  schedule_expression = "rate(5 minutes)"
 }
 
-resource "aws_cloudwatch_event_target" "alexa_handler_every_minute" {
+resource "aws_cloudwatch_event_target" "alexa_handler_every_five_minutes" {
   count = var.alexa_enabled == true ? 1 : 0
-  rule = aws_cloudwatch_event_rule.alexa_handler_every_minute[0].name
+  rule = aws_cloudwatch_event_rule.alexa_handler_every_five_minutes[0].name
   target_id = aws_lambda_function.alexa_handler_function[0].function_name
   arn = aws_lambda_function.alexa_handler_function[0].arn
   input = data.template_file.alexa_wake_up.rendered

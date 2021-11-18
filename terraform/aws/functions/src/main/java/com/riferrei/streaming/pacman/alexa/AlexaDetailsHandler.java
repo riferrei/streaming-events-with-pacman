@@ -12,6 +12,8 @@ import com.amazon.ask.model.Response;
 import com.amazon.ask.model.Slot;
 
 import com.riferrei.streaming.pacman.utils.Player;
+
+import io.opentelemetry.api.trace.Tracer;
 import redis.clients.jedis.Jedis;
 
 import static com.amazon.ask.request.Predicates.intentName;
@@ -19,6 +21,12 @@ import static com.riferrei.streaming.pacman.utils.Constants.*;
 import static com.riferrei.streaming.pacman.utils.SkillUtils.*;
 
 public class AlexaDetailsHandler implements IntentRequestHandler {
+
+    private Tracer tracer;
+
+    public AlexaDetailsHandler(Tracer tracer) {
+        this.tracer = tracer;
+    }
 
     @Override
     public boolean canHandle(HandlerInput input, IntentRequest intentRequest) {
