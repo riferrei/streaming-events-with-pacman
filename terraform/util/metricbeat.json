@@ -1,0 +1,34 @@
+[
+  {
+    "essential": true,
+    "image": "${metricbeat_image}",
+    "name": "metricbeat",
+    "environment": [
+      {
+        "name": "AWS_ACCESS_KEY_ID",
+        "value": "${aws_access_key_id}"
+      },
+      {
+        "name": "AWS_SECRET_ACCESS_KEY",
+        "value": "${aws_secret_access_key}"
+      },
+      {
+        "name": "CLOUD_ID",
+        "value": "${cloud_id}"
+      },
+      {
+        "name": "CLOUD_AUTH",
+        "value": "${cloud_auth}"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-create-group": "true",
+        "awslogs-group": "/ecs/metricbeat",
+        "awslogs-region": "${logs_region}",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  }
+]

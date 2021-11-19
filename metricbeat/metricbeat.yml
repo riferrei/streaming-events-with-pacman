@@ -1,0 +1,35 @@
+metricbeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+
+metricbeat.modules:
+- module: aws
+  period: 1m
+  access_key_id: '${AWS_ACCESS_KEY_ID:""}'
+  secret_access_key: '${AWS_SECRET_ACCESS_KEY:""}'
+  metricsets:
+    - lambda
+
+- module: awsfargate
+  period: 10s
+  metricsets:
+    - task_stats
+
+  reload.enabled: false
+
+setup.template.settings:
+  index.number_of_shards: 1
+  index.codec: best_compression
+
+setup.kibana:
+
+cloud.id: '${CLOUD_ID:""}'
+cloud.auth: '${CLOUD_AUTH:""}'
+
+output.elasticsearch:
+  hosts: ["localhost:9200"]
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~

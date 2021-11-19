@@ -8,6 +8,7 @@ terraform/aws/terraform.tfstate.backup
 terraform/aws/.terraform.tfstate.lock.info
 terraform/aws/.terraform.lock.hcl
 terraform/util/functionbeat
+terraform/util/metricbeat
 
 redis-sink/go.sum
 scoreboard/go.sum

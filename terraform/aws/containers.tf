@@ -396,3 +396,171 @@ resource "aws_cloudwatch_metric_alarm" "redis_sink_cpu_low_alarm" {
   }
  alarm_actions = [aws_appautoscaling_policy.redis_sink_auto_scaling_down.arn]
 }
+
+###########################################
+############ Metricbeat Service ###########
+###########################################
+
+data "aws_iam_policy_document" "metricbeat_policy_document" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    sid = ""
+    effect = "Allow"
+    principals {
+      type = "Service"
+      identifiers = [
+        "events.amazonaws.com",
+        "ecs-tasks.amazonaws.com"
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "metricbeat_role_policy" {
+  role = aws_iam_role.metricbeat_role.name
+  policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Resource": [
+        "*"
+      ],
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ]
+    }
+  ]
+}
+POLICY
+}
+
+resource "aws_iam_role" "metricbeat_role" {
+  name = "metricbeat_role"
+  assume_role_policy = data.aws_iam_policy_document.metricbeat_policy_document.json
+}
+
+resource "aws_iam_role_policy_attachment" "metricbeat_policy_attachment" {
+  role = aws_iam_role.metricbeat_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+data "template_file" "metricbeat_definition" {
+  template = file("../util/metricbeat.json")
+  vars = {
+    metricbeat_image = var.metricbeat_image
+    logs_region = data.aws_region.current.name
+    aws_access_key_id = var.aws_access_key_id
+    aws_secret_access_key = var.aws_secret_access_key
+    cloud_id = ec_deployment.elasticsearch.elasticsearch[0].cloud_id
+    cloud_auth = "${ec_deployment.elasticsearch.elasticsearch_username}:${ec_deployment.elasticsearch.elasticsearch_password}"
+  }
+}
+
+resource "aws_ecs_task_definition" "metricbeat_task" {
+  family = "metricbeat_task"
+  network_mode = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu = "4096"
+  memory = "16384"
+  execution_role_arn = aws_iam_role.metricbeat_role.arn
+  task_role_arn = aws_iam_role.metricbeat_role.arn
+  container_definitions = data.template_file.metricbeat_definition.rendered
+}
+
+resource "aws_ecs_service" "metricbeat_service" {
+  depends_on = [
+    aws_nat_gateway.default,
+    ec_deployment.elasticsearch]
+  name = "metricbeat-service"
+  cluster = aws_ecs_cluster.ecs_cluster.id
+  task_definition = aws_ecs_task_definition.metricbeat_task.arn
+  desired_count = 1
+  launch_type = "FARGATE"
+  network_configuration {
+    security_groups = [aws_security_group.ecs_tasks.id]
+    subnets = aws_subnet.private_subnet[*].id
+  }
+}
+
+###########################################
+######### Metricbeat Auto Scaling #########
+###########################################
+
+resource "aws_appautoscaling_target" "metricbeat_auto_scaling_target" {
+  service_namespace = "ecs"
+  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.metricbeat_service.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  role_arn = aws_iam_role.metricbeat_role.arn
+  min_capacity = 1
+  max_capacity = 2
+}
+
+resource "aws_appautoscaling_policy" "metricbeat_auto_scaling_up" {
+  depends_on = [aws_appautoscaling_target.metricbeat_auto_scaling_target]
+  name = "metricbeat_auto_scaling_up"
+  service_namespace  = "ecs"
+  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.metricbeat_service.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  step_scaling_policy_configuration {
+    adjustment_type = "ChangeInCapacity"
+    cooldown = 60
+    metric_aggregation_type = "Maximum"
+    step_adjustment {
+      metric_interval_lower_bound = 0
+      scaling_adjustment = 1
+    }
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "metricbeat_cpu_high_alarm" {
+  alarm_name = "metricbeat_cpu_high_alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods = "2"
+  metric_name = "CPUUtilization"
+  namespace = "AWS/ECS"
+  period = "60"
+  statistic = "Average"
+  threshold = "80"
+  dimensions = {
+    ClusterName = aws_ecs_cluster.ecs_cluster.name
+    ServiceName = aws_ecs_service.metricbeat_service.name
+  }
+  alarm_actions = [aws_appautoscaling_policy.metricbeat_auto_scaling_up.arn]
+}
+
+resource "aws_appautoscaling_policy" "metricbeat_auto_scaling_down" {
+  depends_on = [aws_appautoscaling_target.metricbeat_auto_scaling_target]
+  name = "metricbeat_auto_scaling_down"
+  service_namespace  = "ecs"
+  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.metricbeat_service.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  step_scaling_policy_configuration {
+    adjustment_type = "ChangeInCapacity"
+    cooldown = 60
+    metric_aggregation_type = "Maximum"
+    step_adjustment {
+      metric_interval_lower_bound = 0
+      scaling_adjustment = -1
+    }
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "metricbeat_cpu_low_alarm" {
+  alarm_name = "metricbeat_cpu_low_alarm"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods = "5"
+  metric_name = "CPUUtilization"
+  namespace = "AWS/ECS"
+  period = "60"
+  statistic = "Average"
+  threshold = "10"
+  dimensions = {
+    ClusterName = aws_ecs_cluster.ecs_cluster.name
+    ServiceName = aws_ecs_service.metricbeat_service.name
+  }
+ alarm_actions = [aws_appautoscaling_policy.metricbeat_auto_scaling_down.arn]
+}

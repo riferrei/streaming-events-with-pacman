@@ -14,6 +14,14 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+variable "aws_access_key_id" {
+  type = string
+}
+
+variable "aws_secret_access_key" {
+  type = string
+}
+
 ###########################################
 ############ Custom Variables #############
 ###########################################
@@ -76,4 +84,9 @@ variable "ksqldb_server_image" {
 variable "redis_sink_image" {
   type = string
   default = "riferrei/redis-sink:latest"
+}
+
+variable "metricbeat_image" {
+  type = string
+  default = "riferrei/metricbeat:latest"
 }
