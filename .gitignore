@@ -7,7 +7,7 @@ terraform/aws/terraform.tfstate
 terraform/aws/terraform.tfstate.backup
 terraform/aws/.terraform.tfstate.lock.info
 terraform/aws/.terraform.lock.hcl
-terraform/aws/logging
+terraform/util/functionbeat
 
 redis-sink/go.sum
 scoreboard/go.sum
