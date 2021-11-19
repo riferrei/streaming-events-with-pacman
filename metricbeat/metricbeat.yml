@@ -2,6 +2,7 @@ metricbeat.config.modules:
   path: ${path.config}/modules.d/*.yml
 
 metricbeat.modules:
+
 - module: aws
   period: 1m
   access_key_id: '${AWS_ACCESS_KEY_ID:""}'
@@ -11,6 +12,8 @@ metricbeat.modules:
 
 - module: awsfargate
   period: 10s
+  access_key_id: '${AWS_ACCESS_KEY_ID:""}'
+  secret_access_key: '${AWS_SECRET_ACCESS_KEY:""}'
   metricsets:
     - task_stats
 
