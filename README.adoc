@@ -1,4 +1,4 @@
-= Streaming Pac-Man
+= Elastic Observability for AWS
 
 :imagesdir: images/
 
