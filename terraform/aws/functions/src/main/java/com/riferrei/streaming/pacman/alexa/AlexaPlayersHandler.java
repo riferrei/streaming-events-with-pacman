@@ -51,6 +51,7 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
             .setAttribute("intent-confirmation-status", intentRequest.getIntent().getConfirmationStatusAsString())
             .setAttribute("intent-slots", intentRequest.getIntent().getSlots().toString())
             .startSpan();
+            
         try (Scope scope = alexaPlayersHandler.makeCurrent()) {
 
             Span redisConnect = tracer.spanBuilder("redis-connect")
