@@ -550,19 +550,19 @@ resource "aws_lambda_permission" "alexa_winner_cloudwatch_trigger" {
   action = "lambda:InvokeFunction"
   principal = "events.amazonaws.com"
   function_name = aws_lambda_function.alexa_handler_function[0].function_name
-  source_arn = aws_cloudwatch_event_rule.alexa_handler_every_five_minutes[0].arn
+  source_arn = aws_cloudwatch_event_rule.alexa_handler_every_two_minutes[0].arn
 }
 
-resource "aws_cloudwatch_event_rule" "alexa_handler_every_five_minutes" {
+resource "aws_cloudwatch_event_rule" "alexa_handler_every_two_minutes" {
   count = var.alexa_enabled == true ? 1 : 0
-  name = "execute-alexa-handler-every-minute"
-  description = "Execute the alexa handler function every 5 minutes"
-  schedule_expression = "rate(5 minutes)"
+  name = "execute-alexa-handler-every-two-minutes"
+  description = "Execute the alexa handler function every 2 minutes"
+  schedule_expression = "rate(2 minutes)"
 }
 
-resource "aws_cloudwatch_event_target" "alexa_handler_every_five_minutes" {
+resource "aws_cloudwatch_event_target" "alexa_handler_every_two_minutes" {
   count = var.alexa_enabled == true ? 1 : 0
-  rule = aws_cloudwatch_event_rule.alexa_handler_every_five_minutes[0].name
+  rule = aws_cloudwatch_event_rule.alexa_handler_every_two_minutes[0].name
   target_id = aws_lambda_function.alexa_handler_function[0].function_name
   arn = aws_lambda_function.alexa_handler_function[0].arn
   input = data.template_file.alexa_wake_up.rendered
