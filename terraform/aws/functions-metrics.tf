@@ -1,8 +1,8 @@
 ###########################################
-################ Metrics ##################
+############ Functions Metrics ############
 ###########################################
 
-data "template_file" "metricbeat" {
+data "template_file" "functions_metrics" {
   template = file("../util/metricbeat/metricbeat.reference.yml")
   vars = {
       aws_access_key_id = var.aws_access_key_id
@@ -12,16 +12,16 @@ data "template_file" "metricbeat" {
   }
 }
 
-resource "local_file" "metricbeat" {
+resource "local_file" "functions_metrics" {
     depends_on = [ec_deployment.elasticsearch]
-    content = data.template_file.metricbeat.rendered
+    content = data.template_file.functions_metrics.rendered
     filename = "../util/metricbeat/metricbeat.yml"
 }
 
-resource "null_resource" "setup_metricbeat" {
-  depends_on = [local_file.metricbeat]
+resource "null_resource" "functions_metrics_setup" {
+  depends_on = [local_file.functions_metrics]
   provisioner "local-exec" {
-    command = "sh setup-metricbeat.sh"
+    command = "sh functions-metrics-setup.sh"
     interpreter = ["bash", "-c"]
     working_dir = "../util"
   }

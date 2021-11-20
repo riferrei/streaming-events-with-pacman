@@ -86,7 +86,12 @@ variable "redis_sink_image" {
   default = "riferrei/redis-sink:latest"
 }
 
+variable "functions_metrics_image" {
+  type = string
+  default = "riferrei/functions-metrics:latest"
+}
+
 variable "metricbeat_image" {
   type = string
-  default = "riferrei/metricbeat:latest"
+  default = "docker.elastic.co/beats/metricbeat:7.15.2"
 }
