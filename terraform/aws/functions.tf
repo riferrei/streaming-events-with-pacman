@@ -177,7 +177,7 @@ resource "aws_lambda_function" "event_handler_function" {
     aws_s3_bucket.pacman]
   function_name = "event_handler"
   description = "Backend function for the Event Handler API"
-  filename = "functions/deploy/streaming-pacman-1.0.jar"
+  filename = "functions/deploy/elastic-o11y-for-aws-1.0.jar"
   handler = "com.riferrei.streaming.pacman.EventHandler"
   role = aws_iam_role.event_handler_role.arn
   runtime = "java11"
@@ -385,22 +385,32 @@ resource "aws_lambda_function" "scoreboard_function" {
     null_resource.build_functions,
     aws_iam_role.scoreboard_role,
     aws_elasticache_replication_group.cache_server,
+    ec_deployment.elasticsearch,
     aws_s3_bucket.pacman]
   function_name = "scoreboard"
   description = "Backend function for the Scoreboard API"
-  filename = "functions/deploy/streaming-pacman-1.0.jar"
-  handler = "com.riferrei.streaming.pacman.Scoreboard"
+  filename = "functions/deploy/elastic-o11y-for-aws-1.0.jar"
+  handler = "com.riferrei.streaming.pacman.Scoreboard::handleRequest"
   role = aws_iam_role.scoreboard_role.arn
   runtime = "java11"
-  memory_size = 256
+  memory_size = 512
   timeout = 60
   environment {
     variables = {
       ORIGIN_ALLOWED = "http://${aws_s3_bucket.pacman.website_endpoint}"
       CACHE_SERVER_HOST = aws_elasticache_replication_group.cache_server.primary_endpoint_address
       CACHE_SERVER_PORT = aws_elasticache_replication_group.cache_server.port
+      AWS_LAMBDA_EXEC_WRAPPER = "/opt/otel-proxy-handler"
+      ELASTIC_OTLP_ENDPOINT = ec_deployment.elasticsearch.apm[0].https_endpoint
+      ELASTIC_OTLP_TOKEN = ec_deployment.elasticsearch.apm_secret_token
+      OPENTELEMETRY_COLLECTOR_CONFIG_FILE = "/var/task/opentelemetry-collector.yaml"
+      OTEL_PROPAGATORS = "tracecontext, baggage"
     }
   }
+  layers = ["arn:aws:lambda:us-east-1:901920570463:layer:aws-otel-java-wrapper-ver-1-7-0:1"]
+  tracing_config {
+    mode = "PassThrough"
+  }  
   vpc_config {
     security_group_ids = [aws_security_group.cache_server.id]
     subnet_ids = aws_subnet.private_subnet[*].id
@@ -508,7 +518,7 @@ resource "aws_lambda_function" "alexa_handler_function" {
     ec_deployment.elasticsearch]
   function_name = "alexa_handler"
   description = "Backend function for the Alexa Handler API"
-  filename = "functions/deploy/streaming-pacman-1.0.jar"
+  filename = "functions/deploy/elastic-o11y-for-aws-1.0.jar"
   handler = "com.riferrei.streaming.pacman.AlexaHandler::handleRequest"
   role = aws_iam_role.alexa_handler_role[0].arn
   runtime = "java11"

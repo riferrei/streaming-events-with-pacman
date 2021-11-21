@@ -11,6 +11,8 @@
 		<link rel="icon" type="image/png" sizes="32x32" href="game/img/favicon-32x32.png">
 		<link rel="icon" type="image/png" sizes="16x16" href="game/img/favicon-16x16.png">
 		<link rel="manifest" href="/site.webmanifest">
+
+		<script type="text/javascript" src="game/js/elastic-apm-rum.umd.min.js"></script>
 		<script type="text/javascript" src="game/js/jquery.js"></script>
 		<script type="text/javascript" src="game/js/jquery-buzz.js"></script>
 		<script type="text/javascript" src="game/js/shared.js"></script>
@@ -26,6 +28,13 @@
         <script type="text/javascript" src="game/js/scoreboard.js"></script>
 
 		<script type="text/javascript">
+
+			elasticApm.init({
+				serviceName: 'scoreboard',
+    			serverUrl: '${apm_server_url}',
+				distributedTracingOrigins: ['${scoreboard_api}'],
+				eventsLimit: 1000
+			})
 
 			$(document).ready(function() { 
 				//$.mobile.loading().hide();
@@ -72,7 +81,7 @@
 
 		</script>
 
-		<title>Streaming Pac-Man with AWS</title>
+		<title>${start_title}</title>
 	</head>
 
 	<body>

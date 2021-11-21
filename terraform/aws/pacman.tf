@@ -64,6 +64,7 @@ resource "aws_s3_bucket_object" "error" {
 data "template_file" "start" {
   template = file("../../pacman/start.html")
   vars = {
+    apm_server_url = ec_deployment.elasticsearch.apm[0].https_endpoint
     start_title = var.start_title
     blinky_alias = var.blinky_alias
     pinky_alias = var.pinky_alias
@@ -73,6 +74,7 @@ data "template_file" "start" {
 }
 
 resource "aws_s3_bucket_object" "start" {
+  depends_on = [ec_deployment.elasticsearch]
   bucket = aws_s3_bucket.pacman.bucket
   key = "start.html"
   content_type = "text/html"
@@ -86,11 +88,20 @@ resource "aws_s3_bucket_object" "webmanifest" {
   source = "../../pacman/site.webmanifest"
 }
 
+data "template_file" "scoreboard" {
+  template = file("../../pacman/scoreboard.html")
+  vars = {
+    start_title = var.start_title
+    apm_server_url = ec_deployment.elasticsearch.apm[0].https_endpoint
+    scoreboard_api = "${aws_api_gateway_deployment.scoreboard_v1.invoke_url}${aws_api_gateway_resource.scoreboard_resource.path}"
+  }
+}
+
 resource "aws_s3_bucket_object" "scoreboard" {
   bucket = aws_s3_bucket.pacman.bucket
   key = "scoreboard.html"
   content_type = "text/html"
-  source = "../../pacman/scoreboard.html"
+  content = data.template_file.scoreboard.rendered
 }
 
 ###########################################

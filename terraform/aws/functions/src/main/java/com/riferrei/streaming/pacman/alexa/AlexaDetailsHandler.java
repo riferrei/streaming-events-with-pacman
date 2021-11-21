@@ -56,6 +56,7 @@ public class AlexaDetailsHandler implements IntentRequestHandler {
                 .setAttribute(SemanticAttributes.DB_OPERATION, "connect")
                 .setAttribute(SemanticAttributes.DB_STATEMENT, "connect")
                 .startSpan();
+
             try (Scope childScope = redisConnect.makeCurrent()) {
                 cacheServer.connect();
             } finally {
@@ -68,6 +69,7 @@ public class AlexaDetailsHandler implements IntentRequestHandler {
                 .setAttribute(SemanticAttributes.DB_STATEMENT, "zcard")
                 .setAttribute("cache-name", SCOREBOARD_CACHE)
                 .startSpan();
+
             try (Scope childScope = rediszcard.makeCurrent()) {
                 if (cacheServer.zcard(SCOREBOARD_CACHE) == 0) {
                     speechText = resourceBundle.getString(NO_PLAYERS);
@@ -147,11 +149,13 @@ public class AlexaDetailsHandler implements IntentRequestHandler {
                     .setAttribute(SemanticAttributes.DB_STATEMENT, "zrevrange")
                     .setAttribute("cache-name", SCOREBOARD_CACHE)
                     .startSpan();
+
                 try (Scope innerScope = redisRevRange.makeCurrent()) {
                     playerKey = cacheServer.zrevrange(SCOREBOARD_CACHE, position, position);
                 } finally {
                     redisRevRange.end();
                 }
+
                 String key = playerKey.iterator().next();
                 String value = null;
                 Span redisGet = tracer.spanBuilder("redis-get")
@@ -160,12 +164,14 @@ public class AlexaDetailsHandler implements IntentRequestHandler {
                     .setAttribute(SemanticAttributes.DB_STATEMENT, "get")
                     .setAttribute("string-key", key)
                     .startSpan();
+
                 try (Scope innerScope = redisGet.makeCurrent()) {
                     value = cacheServer.get(key);
                     redisGet.setAttribute("string-value", value);
                 } finally {
                     redisGet.end();
                 }
+
                 Player player = Player.getPlayer(key, value);
                 speechText.append(getPlayerDetails(player, resourceBundle));
             } else {
@@ -193,6 +199,7 @@ public class AlexaDetailsHandler implements IntentRequestHandler {
         try (Scope childScope = redisExists.makeCurrent()) {
 
             if (cacheServer.exists(playerName)) {
+
                 String value = null;
                 Span redisGet = tracer.spanBuilder("redis-get")
                     .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
@@ -200,14 +207,17 @@ public class AlexaDetailsHandler implements IntentRequestHandler {
                     .setAttribute(SemanticAttributes.DB_STATEMENT, "get")
                     .setAttribute("string-key", playerName)
                     .startSpan();
+
                 try (Scope innerScope = redisGet.makeCurrent()) {
                     value = cacheServer.get(playerName);
                     redisGet.setAttribute("string-value", value);
                 } finally {
                     redisGet.end();
                 }
+
                 Player player = Player.getPlayer(playerName, value);
                 speechText.append(getPlayerDetails(player, resourceBundle));
+                
             } else {
                 String text = resourceBundle.getString(NO_ONE_WITH_THIS_NAME);
                 speechText.append(String.format(text, playerName));

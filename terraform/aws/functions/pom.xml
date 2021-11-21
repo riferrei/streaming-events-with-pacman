@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.confluent.cloud</groupId>
-    <artifactId>streaming-pacman</artifactId>
+    <artifactId>elastic-o11y-for-aws</artifactId>
     <packaging>jar</packaging>
     <version>1.0</version>
 

@@ -17,6 +17,7 @@ import com.amazon.ask.util.ValidationUtils;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.amazonaws.util.IOUtils;
+
 import com.riferrei.streaming.pacman.alexa.AlexaDetailsHandler;
 import com.riferrei.streaming.pacman.alexa.AlexaHelpHandler;
 import com.riferrei.streaming.pacman.alexa.AlexaPlayersHandler;
@@ -28,8 +29,9 @@ import io.opentelemetry.api.trace.Tracer;
 public class AlexaHandler implements RequestStreamHandler {
 
 	private static final Tracer tracer =
-		GlobalOpenTelemetry.getTracer("streaming-pacman-aws");
+		GlobalOpenTelemetry.getTracer("alexa-handler-tracer");
 
+	@SuppressWarnings("rawtypes")
 	private List<AlexaSkill> skills = Collections.singletonList(
 		ValidationUtils.assertNotNull(getSkill(), "skill"));
 
@@ -44,7 +46,7 @@ public class AlexaHandler implements RequestStreamHandler {
 			.build();
 	}
 
-	@Override
+	@Override @SuppressWarnings("rawtypes")
 	public void handleRequest(InputStream input, OutputStream output,
 		Context context) throws IOException {
 		SkillRequest skillRequest = new BaseSkillRequest(IOUtils.toByteArray(input));

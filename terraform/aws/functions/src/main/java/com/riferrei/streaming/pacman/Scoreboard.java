@@ -4,40 +4,56 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
-import java.util.Map;
 import java.util.Set;
-import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 
-import com.riferrei.streaming.pacman.utils.Player;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.attributes.SemanticAttributes;
+import io.opentelemetry.context.Scope;
+
 import redis.clients.jedis.Jedis;
-
+import com.riferrei.streaming.pacman.utils.Player;
 import static com.riferrei.streaming.pacman.utils.Constants.*;
 
-public class Scoreboard implements RequestHandler<Map<String, Object>, Map<String, Object>> {
+public class Scoreboard implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    public Map<String, Object> handleRequest(Map<String, Object> request, Context context) {
+    private static final Tracer tracer =
+        GlobalOpenTelemetry.getTracer("scoreboard-api-tracer");
 
-        final Map<String, Object> response = new HashMap<>();
+    @Override
+    public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
+        
+        final APIGatewayProxyResponseEvent response =
+            new APIGatewayProxyResponseEvent();
 
+        response.setHeaders(Map.of(
+            "Access-Control-Allow-Headers", "*",
+            "Access-Control-Allow-Methods", POST_METHOD,
+            "Access-Control-Allow-Origin", ORIGIN_ALLOWED));
+    
         String player = null;
-        if (request.containsKey(QUERY_PARAMS_KEY)) {
-            @SuppressWarnings("unchecked")
-            Map<String, String> queryParams =
-                (Map<String, String>) request.get(QUERY_PARAMS_KEY);
-            if (queryParams != null && queryParams.containsKey(PLAYER_KEY)) {
-                player = queryParams.get(PLAYER_KEY);
+        if (event.getQueryStringParameters() != null) {
+            if (event.getQueryStringParameters().containsKey(PLAYER_KEY)) {
+                player = event.getQueryStringParameters().get(PLAYER_KEY);
             }
         }
-        
-        response.put(BODY_KEY, getScoreboard(player));
-        Map<String, Object> responseHeaders = new HashMap<>();
-        responseHeaders.put("Access-Control-Allow-Headers", "*");
-        responseHeaders.put("Access-Control-Allow-Methods", POST_METHOD);
-        responseHeaders.put("Access-Control-Allow-Origin", ORIGIN_ALLOWED);
-        response.put(HEADERS_KEY, responseHeaders);
+
+        Span getScoreboard = tracer.spanBuilder("getScoreboard")
+            .setAttribute("player", player != null ? player : null)
+            .startSpan();
+        try (Scope scope = getScoreboard.makeCurrent()) {
+            response.setBody(getScoreboard(player));
+        } finally {
+            getScoreboard.end();
+        }
 
         return response;
 
@@ -45,20 +61,58 @@ public class Scoreboard implements RequestHandler<Map<String, Object>, Map<Strin
 
     private static String getScoreboard(String player) {
 
-        cacheServer.connect();
+        Span redisConnect = tracer.spanBuilder("redis-connect")
+            .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+            .setAttribute(SemanticAttributes.DB_OPERATION, "connect")
+            .setAttribute(SemanticAttributes.DB_STATEMENT, "connect")
+            .startSpan();
+
+        try (Scope childScope = redisConnect.makeCurrent()) {
+            cacheServer.connect();
+        } finally {
+            redisConnect.end();
+        }
+
         JsonObject rootObject = new JsonObject();
 
         if (player != null) {
 
             JsonObject playerEntry = new JsonObject();
 
-            if (cacheServer.exists(player)) {
-                String value = cacheServer.get(player);
-                Player _player = Player.getPlayer(player, value);
-                playerEntry.addProperty(Player.USER, _player.getUser());
-                playerEntry.addProperty(Player.SCORE, _player.getScore());
-                playerEntry.addProperty(Player.LEVEL, _player.getLevel());
-                playerEntry.addProperty(Player.LOSSES, _player.getLosses());
+            Span redisExists = tracer.spanBuilder("redis-exists")
+                .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+                .setAttribute(SemanticAttributes.DB_OPERATION, "exists")
+                .setAttribute(SemanticAttributes.DB_STATEMENT, "exists")
+                .startSpan();
+
+            try (Scope childScope = redisExists.makeCurrent()) {
+
+                if (cacheServer.exists(player)) {
+
+                    String value = null;
+                    Span redisGet = tracer.spanBuilder("redis-get")
+                        .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+                        .setAttribute(SemanticAttributes.DB_OPERATION, "get")
+                        .setAttribute(SemanticAttributes.DB_STATEMENT, "get")
+                        .setAttribute("string-key", player)
+                        .startSpan();
+
+                    try (Scope innerScope = redisGet.makeCurrent()) {
+                        value = cacheServer.get(player);
+                        redisGet.setAttribute("string-value", value);
+                    } finally {
+                        redisGet.end();
+                    }
+                    
+                    Player _player = Player.getPlayer(player, value);
+                    playerEntry.addProperty(Player.USER, _player.getUser());
+                    playerEntry.addProperty(Player.SCORE, _player.getScore());
+                    playerEntry.addProperty(Player.LEVEL, _player.getLevel());
+                    playerEntry.addProperty(Player.LOSSES, _player.getLosses());
+                }
+
+            } finally {
+                redisExists.end();
             }
 
             rootObject.add(SCOREBOARD_FIELD, playerEntry);
@@ -66,19 +120,64 @@ public class Scoreboard implements RequestHandler<Map<String, Object>, Map<Strin
         } else {
 
             JsonArray playerEntries = new JsonArray();
-            long playersAvailable = cacheServer.zcard(SCOREBOARD_CACHE);
+            long playersAvailable = 0;
+
+            Span rediszcard = tracer.spanBuilder("redis-zcard")
+                .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+                .setAttribute(SemanticAttributes.DB_OPERATION, "zcard")
+                .setAttribute(SemanticAttributes.DB_STATEMENT, "zcard")
+                .setAttribute("cache-name", SCOREBOARD_CACHE)
+                .startSpan();
+
+            try (Scope childScope = rediszcard.makeCurrent()) {
+                playersAvailable = cacheServer.zcard(SCOREBOARD_CACHE);
+            } finally {
+                rediszcard.end();
+            }
+
             if (playersAvailable > 0) {
-                Set<String> playerKeys = cacheServer.zrevrange(SCOREBOARD_CACHE, 0, -1);
-                for (String key : playerKeys) {
-                    String value = cacheServer.get(key);
-                    Player _player = Player.getPlayer(key, value);
-                    JsonObject playerEntry = new JsonObject();
-                    playerEntry.addProperty(Player.USER, _player.getUser());
-                    playerEntry.addProperty(Player.SCORE, _player.getScore());
-                    playerEntry.addProperty(Player.LEVEL, _player.getLevel());
-                    playerEntry.addProperty(Player.LOSSES, _player.getLosses());
-                    playerEntries.add(playerEntry);
+
+                Set<String> playerKeys = null;
+                Span rediszrevRange = tracer.spanBuilder("redis-zrevrange")
+                    .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+                    .setAttribute(SemanticAttributes.DB_OPERATION, "zrevrange")
+                    .setAttribute(SemanticAttributes.DB_STATEMENT, "zrevrange")
+                    .setAttribute("cache-name", SCOREBOARD_CACHE)
+                    .startSpan();
+
+                try (Scope innerScope = rediszrevRange.makeCurrent()) {
+                    playerKeys = cacheServer.zrevrange(SCOREBOARD_CACHE, 0, -1);
+                } finally {
+                    rediszrevRange.end();
                 }
+
+                Span redisGet = tracer.spanBuilder("redis-get")
+                    .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+                    .setAttribute(SemanticAttributes.DB_OPERATION, "get")
+                    .setAttribute(SemanticAttributes.DB_STATEMENT, "get")
+                    .setAttribute("string-keys", playerKeys.toString())
+                    .startSpan();
+
+                try (Scope innerScope = redisGet.makeCurrent()) {
+
+                    Set<String> playerValues = new HashSet<>();
+                    for (String key : playerKeys) {
+                        String value = cacheServer.get(key);
+                        playerValues.add(value);
+                        Player _player = Player.getPlayer(key, value);
+                        JsonObject playerEntry = new JsonObject();
+                        playerEntry.addProperty(Player.USER, _player.getUser());
+                        playerEntry.addProperty(Player.SCORE, _player.getScore());
+                        playerEntry.addProperty(Player.LEVEL, _player.getLevel());
+                        playerEntry.addProperty(Player.LOSSES, _player.getLosses());
+                        playerEntries.add(playerEntry);
+                    }
+                    redisGet.setAttribute("string-values", playerValues.toString());
+
+                } finally {
+                    redisGet.end();
+                }
+                
             }
     
             rootObject.add(SCOREBOARD_FIELD, playerEntries);

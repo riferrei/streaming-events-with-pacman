@@ -1,6 +1,7 @@
 package com.riferrei.streaming.pacman.alexa;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -71,6 +72,7 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
                 .setAttribute(SemanticAttributes.DB_STATEMENT, "zcard")
                 .setAttribute("cache-name", SCOREBOARD_CACHE)
                 .startSpan();
+
             try (Scope childScope = rediszcard.makeCurrent()) {
                 if (cacheServer.zcard(SCOREBOARD_CACHE) == 0) {
                     speechText = resourceBundle.getString(NO_PLAYERS);
@@ -83,19 +85,23 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
             }
             
             if (input.matches(intentName(BEST_PLAYER_INTENT))) {
+
                 Span bestPlayerSpan = tracer.spanBuilder("get-best-player").startSpan();
                 try (Scope childScope = bestPlayerSpan.makeCurrent()) {
                     speechText = getBestPlayer(resourceBundle);
                 } finally {
                     bestPlayerSpan.end();
                 }
+
             } else if (input.matches(intentName(TOPN_PLAYERS_INTENT))) {
+
                 Map<String, Slot> slots = intentRequest.getIntent().getSlots();
                 Slot slot = slots.get(NUMBER_OF_PLAYERS_SLOT);
                 int topNPlayers = 1;
                 try {
                     topNPlayers = Integer.parseInt(slot.getValue());
                 } catch (NumberFormatException nfe) {}
+
                 Span topNPlayersSpan = tracer.spanBuilder("get-topn-players").startSpan();
                 topNPlayersSpan.setAttribute("topNPlayers", topNPlayers);
                 try (Scope childScope = topNPlayersSpan.makeCurrent()) {
@@ -103,6 +109,7 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
                 } finally {
                     topNPlayersSpan.end();
                 }
+
             }
 
         } finally {
@@ -126,11 +133,13 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
             .setAttribute(SemanticAttributes.DB_STATEMENT, "zrevrange")
             .setAttribute("cache-name", SCOREBOARD_CACHE)
             .startSpan();
+
         try (Scope scope = redisRevRange.makeCurrent()) {
             bestPlayerKey = cacheServer.zrevrange(SCOREBOARD_CACHE, 0, 0);
         } finally {
             redisRevRange.end();
         }
+
         String key = bestPlayerKey.iterator().next();
         String value = null;
         Span redisGet = tracer.spanBuilder("redis-get")
@@ -139,12 +148,14 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
             .setAttribute(SemanticAttributes.DB_STATEMENT, "get")
             .setAttribute("string-key", key)
             .startSpan();
+
         try (Scope scope = redisGet.makeCurrent()) {
             value = cacheServer.get(key);
             redisGet.setAttribute("string-value", value);
         } finally {
             redisGet.end();
         }
+
         Player player = Player.getPlayer(key, value);
         String text = resourceBundle.getString(BEST_PLAYER);
         speechText.append(String.format(text, player.getUser()));
@@ -163,6 +174,7 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
             .setAttribute(SemanticAttributes.DB_STATEMENT, "zcard")
             .setAttribute("cache-name", SCOREBOARD_CACHE)
             .startSpan();
+
         try (Scope scope = rediszcard.makeCurrent()) {
             playersAvailable = cacheServer.zcard(SCOREBOARD_CACHE);
         } finally {
@@ -178,6 +190,7 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
                 .setAttribute(SemanticAttributes.DB_STATEMENT, "zrevrange")
                 .setAttribute("cache-name", SCOREBOARD_CACHE)
                 .startSpan();
+                
             try (Scope scope = rediszrevRange.makeCurrent()) {
                 playerKeys = cacheServer.zrevrange(SCOREBOARD_CACHE, 0, topNPlayers - 1);
             } finally {
@@ -185,21 +198,23 @@ public class AlexaPlayersHandler implements IntentRequestHandler {
             }
 
             List<Player> players = new ArrayList<>(playerKeys.size());
-            for (String key : playerKeys) {
+            Set<String> playerValues = new HashSet<>();
+            Span redisGet = tracer.spanBuilder("redis-get")
+                .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
+                .setAttribute(SemanticAttributes.DB_OPERATION, "get")
+                .setAttribute(SemanticAttributes.DB_STATEMENT, "get")
+                .setAttribute("string-keys", playerKeys.toString())
+                .startSpan();
 
-                Span redisGet = tracer.spanBuilder("redis-get")
-                    .setAttribute(SemanticAttributes.DB_SYSTEM, "redis")
-                    .setAttribute(SemanticAttributes.DB_OPERATION, "get")
-                    .setAttribute(SemanticAttributes.DB_STATEMENT, "get")
-                    .setAttribute("string-key", key)
-                    .startSpan();
-
-                String value = cacheServer.get(key);
-                redisGet.setAttribute("string-value", value);
-                players.add(Player.getPlayer(key, value));
-
+            try (Scope innerScope = redisGet.makeCurrent()) {
+                for (String key : playerKeys) {
+                    String value = cacheServer.get(key);
+                    playerValues.add(value);
+                    players.add(Player.getPlayer(key, value));
+                }
+                redisGet.setAttribute("string-values", playerValues.toString());
+            } finally {
                 redisGet.end();
-
             }
 
             String and = resourceBundle.getString(AND);
