@@ -5,8 +5,8 @@ metricbeat.modules:
 
 - module: aws
   period: 1m
-  access_key_id: '${AWS_ACCESS_KEY_ID:""}'
-  secret_access_key: '${AWS_SECRET_ACCESS_KEY:""}'
+  access_key_id: '${AWS_ACCESS_KEY_ID}'
+  secret_access_key: '${AWS_SECRET_ACCESS_KEY}'
   metricsets:
     - lambda
 
@@ -18,8 +18,8 @@ setup.template.settings:
 
 setup.kibana:
 
-cloud.id: '${CLOUD_ID:""}'
-cloud.auth: '${CLOUD_AUTH:""}'
+cloud.id: '${CLOUD_ID}'
+cloud.auth: '${CLOUD_AUTH}'
 
 output.elasticsearch:
   hosts: ["localhost:9200"]

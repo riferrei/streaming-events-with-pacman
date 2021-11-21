@@ -91,6 +91,11 @@ variable "functions_metrics_image" {
   default = "riferrei/functions-metrics:latest"
 }
 
+variable "endpoints_availability_image" {
+  type = string
+  default = "riferrei/endpoints-availability:latest"
+}
+
 variable "metricbeat_image" {
   type = string
   default = "docker.elastic.co/beats/metricbeat:7.15.2"

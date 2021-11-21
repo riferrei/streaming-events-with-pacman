@@ -576,3 +576,173 @@ resource "aws_cloudwatch_metric_alarm" "functions_metrics_cpu_low_alarm" {
   }
  alarm_actions = [aws_appautoscaling_policy.functions_metrics_auto_scaling_down.arn]
 }
+
+###########################################
+##### Endpoints Availability Service ######
+###########################################
+
+data "aws_iam_policy_document" "endpoints_availability_policy_document" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    sid = ""
+    effect = "Allow"
+    principals {
+      type = "Service"
+      identifiers = [
+        "events.amazonaws.com",
+        "ecs-tasks.amazonaws.com"
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "endpoints_availability_role_policy" {
+  role = aws_iam_role.endpoints_availability_role.name
+  policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Resource": [
+        "*"
+      ],
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ]
+    }
+  ]
+}
+POLICY
+}
+
+resource "aws_iam_role" "endpoints_availability_role" {
+  name = "endpoints_availability_role"
+  assume_role_policy = data.aws_iam_policy_document.endpoints_availability_policy_document.json
+}
+
+resource "aws_iam_role_policy_attachment" "endpoints_availability_policy_attachment" {
+  role = aws_iam_role.endpoints_availability_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+data "template_file" "endpoints_availability_definition" {
+  template = file("../util/endpoints-availability.json")
+  vars = {
+    endpoints_availability_image = var.endpoints_availability_image
+    logs_region = data.aws_region.current.name
+    pacman_welcome = "http://${aws_s3_bucket.pacman.website_endpoint}"
+    event_handler_api = "${aws_api_gateway_deployment.event_handler_v1.invoke_url}${aws_api_gateway_resource.event_handler_resource.path}"
+    ksqldb_server_api = "http://${aws_alb.ksqldb_lbr.dns_name}:80/info"
+    scoreboard_api = "${aws_api_gateway_deployment.scoreboard_v1.invoke_url}${aws_api_gateway_resource.scoreboard_resource.path}"
+    cloud_id = ec_deployment.elasticsearch.elasticsearch[0].cloud_id
+    cloud_auth = "${ec_deployment.elasticsearch.elasticsearch_username}:${ec_deployment.elasticsearch.elasticsearch_password}"
+  }
+}
+
+resource "aws_ecs_task_definition" "endpoints_availability_task" {
+  family = "endpoints_availability_task"
+  network_mode = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu = "4096"
+  memory = "8192"
+  execution_role_arn = aws_iam_role.endpoints_availability_role.arn
+  task_role_arn = aws_iam_role.endpoints_availability_role.arn
+  container_definitions = data.template_file.endpoints_availability_definition.rendered
+}
+
+resource "aws_ecs_service" "endpoints_availability_service" {
+  depends_on = [
+    aws_nat_gateway.default,
+    ec_deployment.elasticsearch]
+  name = "endpoints_availability-service"
+  cluster = aws_ecs_cluster.ecs_cluster.id
+  task_definition = aws_ecs_task_definition.endpoints_availability_task.arn
+  desired_count = 1
+  launch_type = "FARGATE"
+  network_configuration {
+    security_groups = [aws_security_group.ecs_tasks.id]
+    subnets = aws_subnet.private_subnet[*].id
+  }
+}
+
+###########################################
+### Endpoints Availability Auto Scaling ###
+###########################################
+
+resource "aws_appautoscaling_target" "endpoints_availability_auto_scaling_target" {
+  service_namespace = "ecs"
+  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.endpoints_availability_service.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  role_arn = aws_iam_role.endpoints_availability_role.arn
+  min_capacity = 1
+  max_capacity = 2
+}
+
+resource "aws_appautoscaling_policy" "endpoints_availability_auto_scaling_up" {
+  depends_on = [aws_appautoscaling_target.endpoints_availability_auto_scaling_target]
+  name = "endpoints_availability_auto_scaling_up"
+  service_namespace  = "ecs"
+  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.endpoints_availability_service.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  step_scaling_policy_configuration {
+    adjustment_type = "ChangeInCapacity"
+    cooldown = 60
+    metric_aggregation_type = "Maximum"
+    step_adjustment {
+      metric_interval_lower_bound = 0
+      scaling_adjustment = 1
+    }
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "endpoints_availability_cpu_high_alarm" {
+  alarm_name = "endpoints_availability_cpu_high_alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods = "2"
+  metric_name = "CPUUtilization"
+  namespace = "AWS/ECS"
+  period = "60"
+  statistic = "Average"
+  threshold = "80"
+  dimensions = {
+    ClusterName = aws_ecs_cluster.ecs_cluster.name
+    ServiceName = aws_ecs_service.endpoints_availability_service.name
+  }
+  alarm_actions = [aws_appautoscaling_policy.endpoints_availability_auto_scaling_up.arn]
+}
+
+resource "aws_appautoscaling_policy" "endpoints_availability_auto_scaling_down" {
+  depends_on = [aws_appautoscaling_target.endpoints_availability_auto_scaling_target]
+  name = "endpoints_availability_auto_scaling_down"
+  service_namespace  = "ecs"
+  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.endpoints_availability_service.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  step_scaling_policy_configuration {
+    adjustment_type = "ChangeInCapacity"
+    cooldown = 60
+    metric_aggregation_type = "Maximum"
+    step_adjustment {
+      metric_interval_lower_bound = 0
+      scaling_adjustment = -1
+    }
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "endpoints_availability_cpu_low_alarm" {
+  alarm_name = "endpoints_availability_cpu_low_alarm"
+  comparison_operator = "LessThanOrEqualToThreshold"
+  evaluation_periods = "5"
+  metric_name = "CPUUtilization"
+  namespace = "AWS/ECS"
+  period = "60"
+  statistic = "Average"
+  threshold = "10"
+  dimensions = {
+    ClusterName = aws_ecs_cluster.ecs_cluster.name
+    ServiceName = aws_ecs_service.endpoints_availability_service.name
+  }
+ alarm_actions = [aws_appautoscaling_policy.endpoints_availability_auto_scaling_down.arn]
+}

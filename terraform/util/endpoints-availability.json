@@ -1,0 +1,48 @@
+[
+  {
+    "command": [
+      "./heartbeat setup -E cloud.id=$CLOUD_ID -E cloud.auth=$CLOUD_AUTH && ./heartbeat -e -E PACMAN_WELCOME=$PACMAN_WELCOME -E EVENT_HANDLER_API=$EVENT_HANDLER_API -E SCOREBOARD_API=$SCOREBOARD_API -E cloud.id=$CLOUD_ID -E cloud.auth=$CLOUD_AUTH"
+    ],
+    "entryPoint": [
+      "sh", "-c"
+    ],
+    "essential": true,
+    "image": "${endpoints_availability_image}",
+    "name": "endpoints_availability",
+    "environment": [
+      {
+        "name": "PACMAN_WELCOME",
+        "value": "${pacman_welcome}"
+      },
+      {
+        "name": "EVENT_HANDLER_API",
+        "value": "${event_handler_api}"
+      },
+      {
+        "name": "KSQLDB_SERVER_API",
+        "value": "${ksqldb_server_api}"
+      },
+      {
+        "name": "SCOREBOARD_API",
+        "value": "${scoreboard_api}"
+      },
+      {
+        "name": "CLOUD_ID",
+        "value": "${cloud_id}"
+      },
+      {
+        "name": "CLOUD_AUTH",
+        "value": "${cloud_auth}"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-create-group": "true",
+        "awslogs-group": "/ecs/endpoints_availability",
+        "awslogs-region": "${logs_region}",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  }
+]
