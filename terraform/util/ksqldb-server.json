@@ -16,6 +16,10 @@
         "value": "ksqldb-cluster"
       },
       {
+        "name": "KSQL_KSQL_QUERIES_FILE",
+        "value": "/etc/ksqldb/queries.sql"
+      },
+      {
         "name": "KSQL_BOOTSTRAP_SERVERS",
         "value": "${bootstrap_server}"
       },

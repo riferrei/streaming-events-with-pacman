@@ -47,7 +47,7 @@ function initGame(newGame) {
 	// be if compared to the best player.
 
 	loadHighestScore(function(hgs) {
-		HIGHSCORE = hgs?hgs:HIGHSCORE;
+		HIGHSCORE = hgs ? hgs : HIGHSCORE;
 		if (HIGHSCORE === 0) {
 			$('#highscore span').html("00");
 		} else { 

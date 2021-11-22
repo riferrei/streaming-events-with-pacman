@@ -144,7 +144,6 @@ data "template_file" "shared_js" {
   template = file("../../pacman/game/js/shared.js")
   vars = {
     event_handler_api = "${aws_api_gateway_deployment.event_handler_v1.invoke_url}${aws_api_gateway_resource.event_handler_resource.path}"
-    ksqldb_query_api = "http://${aws_alb.ksqldb_lbr.dns_name}/query"
     scoreboard_api = "${aws_api_gateway_deployment.scoreboard_v1.invoke_url}${aws_api_gateway_resource.scoreboard_resource.path}"
   }
 }

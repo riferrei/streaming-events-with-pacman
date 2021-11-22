@@ -78,7 +78,7 @@ variable "clyde_alias" {
 
 variable "ksqldb_server_image" {
   type = string
-  default = "confluentinc/ksqldb-server:0.20.0"
+  default = "riferrei/ksqldb-server:latest"
 }
 
 variable "redis_sink_image" {

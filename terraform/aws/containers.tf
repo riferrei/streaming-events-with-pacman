@@ -89,7 +89,6 @@ resource "aws_ecs_task_definition" "ksqldb_server_task" {
 resource "aws_ecs_service" "ksqldb_server_service" {
   depends_on = [
     ec_deployment.elasticsearch,
-    aws_alb_listener.ksqldb_lbr_listener,
     aws_nat_gateway.default
   ]
   name = "ksqldb-server-service"
@@ -100,11 +99,6 @@ resource "aws_ecs_service" "ksqldb_server_service" {
   network_configuration {
     security_groups = [aws_security_group.ecs_tasks.id]
     subnets = aws_subnet.private_subnet[*].id
-  }
-  load_balancer {
-    target_group_arn = aws_alb_target_group.ksqldb_target_group.id
-    container_name = "ksqldb_server"
-    container_port = "8088"
   }
 }
 
@@ -185,45 +179,6 @@ resource "aws_cloudwatch_metric_alarm" "ksqldb_server_cpu_low_alarm" {
     ServiceName = aws_ecs_service.ksqldb_server_service.name
   }
  alarm_actions = [aws_appautoscaling_policy.ksqldb_server_auto_scaling_down.arn]
-}
-
-###########################################
-########### ksqlDB Load Balancer ##########
-###########################################
-
-resource "aws_alb" "ksqldb_lbr" {
-  name = "${var.global_prefix}${random_string.random_string.result}-ksqldb"
-  subnets = aws_subnet.public_subnet[*].id
-  security_groups = [aws_security_group.load_balancer.id]
-  tags = {
-    Name = "${var.global_prefix}${random_string.random_string.result}-ksqldb"
-  }
-}
-
-resource "aws_alb_target_group" "ksqldb_target_group" {
-  name = "${var.global_prefix}-ksqldb-tgroup"
-  port = "8088"
-  protocol = "HTTP"
-  vpc_id = aws_vpc.default.id
-  target_type = "ip"
-  health_check {
-    healthy_threshold = 3
-    unhealthy_threshold = 3
-    timeout = 3
-    interval = 5
-    path = "/info"
-    port = "8088"
-  }
-}
-
-resource "aws_alb_listener" "ksqldb_lbr_listener" {
-  load_balancer_arn = aws_alb.ksqldb_lbr.arn
-  protocol = "HTTP"
-  port = "80"
-  default_action {
-    target_group_arn = aws_alb_target_group.ksqldb_target_group.arn
-    type = "forward"
-  }
 }
 
 ###########################################
@@ -635,7 +590,6 @@ data "template_file" "endpoints_availability_definition" {
     logs_region = data.aws_region.current.name
     pacman_welcome = "http://${aws_s3_bucket.pacman.website_endpoint}"
     event_handler_api = "${aws_api_gateway_deployment.event_handler_v1.invoke_url}${aws_api_gateway_resource.event_handler_resource.path}"
-    ksqldb_server_api = "http://${aws_alb.ksqldb_lbr.dns_name}:80/info"
     scoreboard_api = "${aws_api_gateway_deployment.scoreboard_v1.invoke_url}${aws_api_gateway_resource.scoreboard_resource.path}"
     cloud_id = ec_deployment.elasticsearch.elasticsearch[0].cloud_id
     cloud_auth = "${ec_deployment.elasticsearch.elasticsearch_username}:${ec_deployment.elasticsearch.elasticsearch_password}"

@@ -25,18 +25,6 @@ heartbeat.monitors:
       'Content-Type': 'application/json'
 
 - type: http
-  id: ksqldb-server-api
-  name: ksqlDB Server API
-  schedule: '@every 5s'
-  urls: ['${KSQLDB_SERVER_API}']
-  check.request:
-    method: GET
-  check.response:
-    status: [200]
-    headers:
-      'Content-Type': 'application/json'
-
-- type: http
   id: scoreboard-api
   name: Scoreboard API
   schedule: '@every 5s'

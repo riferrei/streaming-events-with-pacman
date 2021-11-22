@@ -1,5 +1,11 @@
 [
   {
+    "command": [
+      "./metricbeat -c /usr/share/metricbeat/metricbeat.yml setup -E cloud.id=$CLOUD_ID -E cloud.auth=$CLOUD_AUTH && ./metricbeat -c /usr/share/metricbeat/metricbeat.yml -e -E access_key_id=$AWS_ACCESS_KEY_ID -E secret_access_key=$AWS_SECRET_ACCESS_KEY -E cloud.id=$CLOUD_ID -E cloud.auth=$CLOUD_AUTH"
+    ],
+    "entryPoint": [
+      "sh", "-c"
+    ],
     "essential": true,
     "image": "${functions_metrics_image}",
     "name": "functions_metrics",

@@ -1,32 +1,24 @@
 var EVENT_HANDLER_API = "${event_handler_api}"
-var KSQLDB_QUERY_API = "${ksqldb_query_api}"
 var SCOREBOARD_API = "${scoreboard_api}"
 
 function loadHighestScore(callback) {
 
-	var highestScore ;
-	var ksqlQuery = {};
-	ksqlQuery.ksql =
-		"SELECT HIGHEST_SCORE_VALUE FROM HIGHEST_SCORE " +
-		"WHERE HIGHEST_SCORE_KEY = 'HIGHEST_SCORE_KEY';";
-
-	var request = new XMLHttpRequest();
-    request.onreadystatechange = function() {
-        if (this.readyState == 4) {
-			if (this.status == 200) {
-				var result = JSON.parse(this.responseText);
-				if (result[1] != undefined || result[1] != null) {
-					var row = result[1].row;
-					highestScore = row.columns[0];
-				}
-            }
-            callback(highestScore);
+	const request = new XMLHttpRequest();
+	request.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			var result = JSON.parse(this.responseText);
+			var highestScoreResult = result.scoreboard.sort(function(a, b) {
+				var res = 0
+				if (a.score > b.score) res = 1;
+				if (b.score > a.score) res = -1;
+				return res * -1;
+			});;
+			callback(highestScoreResult[0].score);
 		}
 	};
-	request.open('POST', KSQLDB_QUERY_API, true);
-	request.setRequestHeader('Accept', 'application/vnd.ksql.v1+json');
-	request.setRequestHeader('Content-Type', 'application/vnd.ksql.v1+json');
-	request.send(JSON.stringify(ksqlQuery));
+	
+	request.open('POST', SCOREBOARD_API, true);
+	request.send(); 
 
 }
 
@@ -49,7 +41,7 @@ function getScoreboardJson(callback) {
 					} 
 				} 
 				return res * -1;
-			  });;
+			});;
 			callback(playersScores);
 		}
 	};

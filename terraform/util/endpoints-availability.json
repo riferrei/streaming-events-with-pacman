@@ -19,10 +19,6 @@
         "value": "${event_handler_api}"
       },
       {
-        "name": "KSQLDB_SERVER_API",
-        "value": "${ksqldb_server_api}"
-      },
-      {
         "name": "SCOREBOARD_API",
         "value": "${scoreboard_api}"
       },
