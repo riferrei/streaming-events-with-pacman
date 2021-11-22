@@ -1,16 +1,4 @@
 /**********************************************/
-/*                                            */
-/*  Before running this script, it is a good  */
-/*  idea to set the position of the offset to */
-/*  the earliest position to load all data.   */
-/*                                            */
-/**********************************************/
-/*                                            */
-/*   SET 'auto.offset.reset' = 'earliest';    */
-/*                                            */
-/**********************************************/
-
-/**********************************************/
 /*************** Stream Sources ***************/
 /**********************************************/
 
@@ -50,13 +38,3 @@ CREATE TABLE SCOREBOARD AS
 		END AS TOTAL_LOSSES
 	FROM STATS_PER_USER SPU LEFT JOIN
 	LOSSES_PER_USER LPU ON SPU.USER = LPU.USER;
-
-/**********************************************/
-/**************** Highest Score ***************/
-/**********************************************/
-
-CREATE TABLE HIGHEST_SCORE AS
-	SELECT
-		'HIGHEST_SCORE_KEY' AS HIGHEST_SCORE_KEY,
-		MAX(GAME->SCORE) AS HIGHEST_SCORE_VALUE
-	FROM USER_GAME GROUP BY 'HIGHEST_SCORE_KEY';
