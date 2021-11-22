@@ -18,7 +18,7 @@ data "ec_stack" "latest" {
 }
 
 resource "ec_deployment" "elasticsearch" {
-  name = "${var.global_prefix}-elastic-o11y"
+  name = var.global_prefix
   deployment_template_id = "aws-io-optimized-v2"
   region = data.ec_stack.latest.region
   version = data.ec_stack.latest.version
