@@ -3,7 +3,7 @@
 ###########################################
 
 data "template_file" "functions_logging" {
-  template = file("../util/functionbeat/functionbeat.reference.yml")
+  template = file("../util/functions-logging-template.yml")
   vars = {
       functionbeat_bucket_name = "${var.global_prefix}${random_string.random_string.result}-functionbeat"
       cloud_id = ec_deployment.elasticsearch.elasticsearch[0].cloud_id

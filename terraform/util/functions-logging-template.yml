@@ -1,0 +1,47 @@
+functionbeat.provider.aws.endpoint: "s3.amazonaws.com"
+functionbeat.provider.aws.deploy_bucket: "${functionbeat_bucket_name}"
+functionbeat.provider.aws.functions:
+
+  - name: event-handler-logs
+    enabled: true
+    type: cloudwatch_logs
+    description: "Lambda function for Event Handler API"
+    role: arn:aws:iam::665065462409:role/FunctionbeatRole
+    triggers:
+      - log_group_name: /aws/lambda/event_handler
+
+  - name: scoreboard-logs
+    enabled: true
+    type: cloudwatch_logs
+    description: "Lambda function for Scoreboard API"
+    role: arn:aws:iam::665065462409:role/FunctionbeatRole
+    triggers:
+      - log_group_name: /aws/lambda/scoreboard
+
+  - name: alexa-logs
+    enabled: true
+    type: cloudwatch_logs
+    description: "Lambda function for Alexa logs"
+    role: arn:aws:iam::665065462409:role/FunctionbeatRole
+    triggers:
+      - log_group_name: /aws/lambda/alexa_handler
+
+setup.template.settings:
+  index.number_of_shards: 1
+
+setup.ilm.enabled: auto
+setup.ilm.rollover_alias: "filebeat"
+setup.ilm.pattern: "{now/d}-000001"
+setup.template.name: "filebeat"
+setup.template.pattern: "filebeat-*"
+setup.kibana:
+
+cloud.id: "${cloud_id}"
+cloud.auth: "${cloud_auth}"
+
+output.elasticsearch:
+  hosts: ["localhost:9200"]
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
