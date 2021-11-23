@@ -7,6 +7,11 @@ functionbeat.provider.aws.functions:
     type: cloudwatch_logs
     description: "Lambda function for Event Handler API"
     role: ${functions_logging_role_arn}
+    processors:
+      - add_fields:
+          target: event
+          fields:
+            dataset: event-handler-function
     triggers:
       - log_group_name: /aws/lambda/event_handler
     
@@ -15,6 +20,11 @@ functionbeat.provider.aws.functions:
     type: cloudwatch_logs
     description: "Lambda function for Scoreboard API"
     role: ${functions_logging_role_arn}
+    processors:
+      - add_fields:
+          target: event
+          fields:
+            dataset: scoreboard-function
     triggers:
       - log_group_name: /aws/lambda/scoreboard
 
@@ -23,6 +33,11 @@ functionbeat.provider.aws.functions:
     type: cloudwatch_logs
     description: "Lambda function for Alexa logs"
     role: ${functions_logging_role_arn}
+    processors:
+      - add_fields:
+          target: event
+          fields:
+            dataset: alexa-handler-function
     triggers:
       - log_group_name: /aws/lambda/alexa_handler
 
@@ -45,7 +60,3 @@ output.elasticsearch:
 processors:
   - add_host_metadata: ~
   - add_cloud_metadata: ~
-  - add_fields:
-      target: event
-      fields:
-        dataset: functions-logs
