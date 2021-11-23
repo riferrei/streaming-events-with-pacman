@@ -47,11 +47,18 @@ variable "scoreboard_topic" {
   default = "SCOREBOARD"
 }
 
+data "template_file" "index" {
+  template = file("../../pacman/index.html")
+  vars = {
+    start_title = var.start_title
+  }
+}
+
 resource "aws_s3_bucket_object" "index" {
   bucket = aws_s3_bucket.pacman.bucket
   key = "index.html"
   content_type = "text/html"
-  source = "../../pacman/index.html"
+  content = data.template_file.index.rendered
 }
 
 resource "aws_s3_bucket_object" "error" {

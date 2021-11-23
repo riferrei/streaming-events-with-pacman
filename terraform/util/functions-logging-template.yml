@@ -6,7 +6,7 @@ functionbeat.provider.aws.functions:
     enabled: true
     type: cloudwatch_logs
     description: "Lambda function for Event Handler API"
-    role: arn:aws:iam::665065462409:role/FunctionbeatRole
+    role: ${functions_logging_role_arn}
     triggers:
       - log_group_name: /aws/lambda/event_handler
 
@@ -14,7 +14,7 @@ functionbeat.provider.aws.functions:
     enabled: true
     type: cloudwatch_logs
     description: "Lambda function for Scoreboard API"
-    role: arn:aws:iam::665065462409:role/FunctionbeatRole
+    role: ${functions_logging_role_arn}
     triggers:
       - log_group_name: /aws/lambda/scoreboard
 
@@ -22,7 +22,7 @@ functionbeat.provider.aws.functions:
     enabled: true
     type: cloudwatch_logs
     description: "Lambda function for Alexa logs"
-    role: arn:aws:iam::665065462409:role/FunctionbeatRole
+    role: ${functions_logging_role_arn}
     triggers:
       - log_group_name: /aws/lambda/alexa_handler
 
