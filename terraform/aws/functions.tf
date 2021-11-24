@@ -2,16 +2,32 @@
 ############ Common Artifacts #############
 ###########################################
 
-resource "null_resource" "build_functions" {
+resource "null_resource" "event_handler_function_build" {
   provisioner "local-exec" {
     command = "sh build.sh"
     interpreter = ["bash", "-c"]
-    working_dir = "functions"
+    working_dir = "../../functions/event-handler-function"
+  }
+}
+
+resource "null_resource" "scoreboard_function_build" {
+  provisioner "local-exec" {
+    command = "sh build.sh"
+    interpreter = ["bash", "-c"]
+    working_dir = "../../functions/scoreboard-function"
+  }
+}
+
+resource "null_resource" "alexa_handler_function_build" {
+  provisioner "local-exec" {
+    command = "sh build.sh"
+    interpreter = ["bash", "-c"]
+    working_dir = "../../functions/alexa-handler-function"
   }
 }
 
 data "template_file" "generic_wake_up" {
-  template = file("functions/generic-wake-up.json")
+  template = file("../util/generic-wake-up.json")
 }
 
 ###########################################
@@ -172,12 +188,12 @@ EOF
 
 resource "aws_lambda_function" "event_handler_function" {
   depends_on = [
-    null_resource.build_functions,
+    null_resource.event_handler_function_build,
     aws_iam_role.event_handler_role,
     aws_s3_bucket.pacman]
   function_name = "event_handler"
   description = "Backend function for the Event Handler API"
-  filename = "functions/deploy/elastic-o11y-for-aws-1.0.jar"
+  filename = "../../functions/event-handler-function/deploy/event-handler-function-1.0.jar"
   handler = "com.riferrei.streaming.pacman.EventHandler"
   role = aws_iam_role.event_handler_role.arn
   runtime = "java11"
@@ -382,14 +398,14 @@ EOF
 
 resource "aws_lambda_function" "scoreboard_function" {
   depends_on = [
-    null_resource.build_functions,
+    null_resource.scoreboard_function_build,
     aws_iam_role.scoreboard_role,
     aws_elasticache_replication_group.cache_server,
     ec_deployment.elasticsearch,
     aws_s3_bucket.pacman]
   function_name = "scoreboard"
   description = "Backend function for the Scoreboard API"
-  filename = "functions/deploy/elastic-o11y-for-aws-1.0.jar"
+  filename = "../../functions/scoreboard-function/deploy/scoreboard-function-1.0.jar"
   handler = "com.riferrei.streaming.pacman.Scoreboard::handleRequest"
   role = aws_iam_role.scoreboard_role.arn
   runtime = "java11"
@@ -425,33 +441,12 @@ resource "aws_lambda_permission" "scoreboard_api_gateway_trigger" {
   source_arn = "${aws_api_gateway_rest_api.scoreboard_api.execution_arn}/${aws_api_gateway_deployment.scoreboard_v1.stage_name}/*/*"
 }
 
-resource "aws_lambda_permission" "scoreboard_cloudwatch_trigger" {
-  statement_id = "AllowExecutionFromCloudWatch"
-  action = "lambda:InvokeFunction"
-  principal = "events.amazonaws.com"
-  function_name = aws_lambda_function.scoreboard_function.function_name
-  source_arn = aws_cloudwatch_event_rule.scoreboard_every_minute.arn
-}
-
-resource "aws_cloudwatch_event_rule" "scoreboard_every_minute" {
-  name = "execute-scoreboard-every-minute"
-  description = "Execute the scoreboard function every minute"
-  schedule_expression = "rate(1 minute)"
-}
-
-resource "aws_cloudwatch_event_target" "scoreboard_every_minute" {
-  rule = aws_cloudwatch_event_rule.scoreboard_every_minute.name
-  target_id = aws_lambda_function.scoreboard_function.function_name
-  arn = aws_lambda_function.scoreboard_function.arn
-  input = data.template_file.generic_wake_up.rendered
-}
-
 ###########################################
 ######### Alexa Handler Function ##########
 ###########################################
 
 data "template_file" "alexa_wake_up" {
-  template = file("functions/alexa-wake-up.json")
+  template = file("../util/alexa-wake-up.json")
 }
 
 resource "aws_iam_role_policy" "alexa_handler_role_policy" {
@@ -512,13 +507,13 @@ EOF
 resource "aws_lambda_function" "alexa_handler_function" {
   count = var.alexa_enabled == true ? 1 : 0
   depends_on = [
-    null_resource.build_functions,
+    null_resource.alexa_handler_function_build,
     aws_iam_role.alexa_handler_role,
     aws_elasticache_replication_group.cache_server,
     ec_deployment.elasticsearch]
   function_name = "alexa_handler"
   description = "Backend function for the Alexa Handler API"
-  filename = "functions/deploy/elastic-o11y-for-aws-1.0.jar"
+  filename = "../../functions/alexa-handler-function/deploy/alexa-handler-function-1.0.jar"
   handler = "com.riferrei.streaming.pacman.AlexaHandler::handleRequest"
   role = aws_iam_role.alexa_handler_role[0].arn
   runtime = "java11"

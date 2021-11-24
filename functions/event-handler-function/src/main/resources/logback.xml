@@ -1,0 +1,6 @@
+<encoder class="co.elastic.logging.logback.EcsEncoder">
+    <serviceName>event-handler-function</serviceName>
+    <eventDataset>event-handler-function</eventDataset>
+    <serviceNodeName>event-handler-function-node</serviceNodeName>
+    <stackTraceAsArray>true</stackTraceAsArray>
+</encoder>

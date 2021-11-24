@@ -1,0 +1,6 @@
+<encoder class="co.elastic.logging.logback.EcsEncoder">
+    <serviceName>scoreboard-function</serviceName>
+    <eventDataset>scoreboard-function</eventDataset>
+    <serviceNodeName>scoreboard-function-node</serviceNodeName>
+    <stackTraceAsArray>true</stackTraceAsArray>
+</encoder>

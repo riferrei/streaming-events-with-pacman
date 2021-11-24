@@ -1,0 +1,6 @@
+<encoder class="co.elastic.logging.logback.EcsEncoder">
+    <serviceName>alexa-handler-function</serviceName>
+    <eventDataset>alexa-handler-function</eventDataset>
+    <serviceNodeName>alexa-handler-function-node</serviceNodeName>
+    <stackTraceAsArray>true</stackTraceAsArray>
+</encoder>
