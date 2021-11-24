@@ -8,7 +8,7 @@
     ],
     "essential": true,
     "image": "${endpoints_availability_image}",
-    "name": "endpoints_availability",
+    "name": "endpoints-availability",
     "environment": [
       {
         "name": "PACMAN_WELCOME",

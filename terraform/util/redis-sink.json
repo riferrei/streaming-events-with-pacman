@@ -2,7 +2,7 @@
   {
     "essential": true,
     "image": "${redis_sink_image}",
-    "name": "redis_sink",
+    "name": "redis-sink",
     "environment": [
       {
         "name": "BOOTSTRAP_SERVER",
@@ -53,7 +53,7 @@
       "logDriver": "awslogs",
       "options": {
         "awslogs-create-group": "true",
-        "awslogs-group": "/ecs/redis_sink",
+        "awslogs-group": "/ecs/redis-sink",
         "awslogs-region": "${logs_region}",
         "awslogs-stream-prefix": "ecs"
       }

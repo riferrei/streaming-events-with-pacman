@@ -1,14 +1,31 @@
-metricbeat.config.modules:
-  path: ${path.config}/modules.d/*.yml
-
 metricbeat.modules:
 
 - module: aws
+  enabled: true
   period: 1m
   access_key_id: '${AWS_ACCESS_KEY_ID}'
   secret_access_key: '${AWS_SECRET_ACCESS_KEY}'
   metricsets:
     - lambda
+
+- module: kafka
+  enabled: true
+  period: 10s
+  hosts: ["${BOOTSTRAP_SERVERS}"]
+  metricsets:
+    - consumergroup
+    - partition
+
+- module: redis
+  enabled: true
+  period: 10s
+  hosts: ["${CACHE_SERVER}"]
+  metricsets:
+    - info
+    - key
+    - keyspace
+  key.patterns:
+    - pattern: '*'
 
   reload.enabled: false
 

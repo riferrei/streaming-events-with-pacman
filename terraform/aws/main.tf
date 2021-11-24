@@ -94,9 +94,9 @@ variable "redis_sink_image" {
   default = "riferrei/redis-sink:latest"
 }
 
-variable "functions_metrics_image" {
+variable "aws_services_metrics_image" {
   type = string
-  default = "riferrei/functions-metrics:latest"
+  default = "riferrei/aws-services-metrics:latest"
 }
 
 variable "endpoints_availability_image" {

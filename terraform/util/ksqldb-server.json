@@ -2,7 +2,7 @@
   {
     "essential": true,
     "image": "${ksqldb_server_image}",
-    "name": "ksqldb_server",
+    "name": "ksqldb-server",
     "portMappings": [
       {
         "hostPort": 8088,
@@ -76,7 +76,7 @@
       "logDriver": "awslogs",
       "options": {
         "awslogs-create-group": "true",
-        "awslogs-group": "/ecs/ksqldb_server",
+        "awslogs-group": "/ecs/ksqldb-server",
         "awslogs-region": "${logs_region}",
         "awslogs-stream-prefix": "ecs"
       }

@@ -365,10 +365,10 @@ resource "aws_cloudwatch_metric_alarm" "redis_sink_cpu_low_alarm" {
 }
 
 ###########################################
-######## Functions Metrics Service ########
+###### AWS Services Metrics Service #######
 ###########################################
 
-data "aws_iam_policy_document" "functions_metrics_policy_document" {
+data "aws_iam_policy_document" "aws_services_metrics_policy_document" {
   statement {
     actions = ["sts:AssumeRole"]
     sid = ""
@@ -383,8 +383,8 @@ data "aws_iam_policy_document" "functions_metrics_policy_document" {
   }
 }
 
-resource "aws_iam_role_policy" "functions_metrics_role_policy" {
-  role = aws_iam_role.functions_metrics_role.name
+resource "aws_iam_role_policy" "aws_services_metrics_role_policy" {
+  role = aws_iam_role.aws_services_metrics_role.name
   policy = <<POLICY
 {
   "Version": "2012-10-17",
@@ -405,46 +405,48 @@ resource "aws_iam_role_policy" "functions_metrics_role_policy" {
 POLICY
 }
 
-resource "aws_iam_role" "functions_metrics_role" {
-  name = "functions-metrics-role"
-  assume_role_policy = data.aws_iam_policy_document.functions_metrics_policy_document.json
+resource "aws_iam_role" "aws_services_metrics_role" {
+  name = "aws_services_metrics-role"
+  assume_role_policy = data.aws_iam_policy_document.aws_services_metrics_policy_document.json
 }
 
-resource "aws_iam_role_policy_attachment" "functions_metrics_policy_attachment" {
-  role = aws_iam_role.functions_metrics_role.name
+resource "aws_iam_role_policy_attachment" "aws_services_metrics_policy_attachment" {
+  role = aws_iam_role.aws_services_metrics_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-data "template_file" "functions_metrics_definition" {
-  template = file("../util/functions-metrics.json")
+data "template_file" "aws_services_metrics_definition" {
+  template = file("../util/aws-services-metrics.json")
   vars = {
-    functions_metrics_image = var.functions_metrics_image
+    aws_services_metrics_image = var.aws_services_metrics_image
     logs_region = data.aws_region.current.name
     aws_access_key_id = var.aws_access_key_id
     aws_secret_access_key = var.aws_secret_access_key
+    bootstrap_servers = split(",", aws_msk_cluster.kafka_cluster.bootstrap_brokers)[0]
+    cache_server = "${aws_elasticache_replication_group.cache_server.primary_endpoint_address}:${aws_elasticache_replication_group.cache_server.port}"
     cloud_id = ec_deployment.elasticsearch.elasticsearch[0].cloud_id
     cloud_auth = "${ec_deployment.elasticsearch.elasticsearch_username}:${ec_deployment.elasticsearch.elasticsearch_password}"
   }
 }
 
-resource "aws_ecs_task_definition" "functions_metrics_task" {
-  family = "functions-metrics-task"
+resource "aws_ecs_task_definition" "aws_services_metrics_task" {
+  family = "aws-services-metrics-task"
   network_mode = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu = "4096"
-  memory = "8192"
-  execution_role_arn = aws_iam_role.functions_metrics_role.arn
-  task_role_arn = aws_iam_role.functions_metrics_role.arn
-  container_definitions = data.template_file.functions_metrics_definition.rendered
+  memory = "16384"
+  execution_role_arn = aws_iam_role.aws_services_metrics_role.arn
+  task_role_arn = aws_iam_role.aws_services_metrics_role.arn
+  container_definitions = data.template_file.aws_services_metrics_definition.rendered
 }
 
-resource "aws_ecs_service" "functions_metrics_service" {
+resource "aws_ecs_service" "aws_services_metrics_service" {
   depends_on = [
     aws_nat_gateway.default,
     ec_deployment.elasticsearch]
-  name = "functions-metrics-service"
+  name = "aws-services-metrics-service"
   cluster = aws_ecs_cluster.ecs_cluster.id
-  task_definition = aws_ecs_task_definition.functions_metrics_task.arn
+  task_definition = aws_ecs_task_definition.aws_services_metrics_task.arn
   desired_count = 1
   launch_type = "FARGATE"
   network_configuration {
@@ -454,23 +456,23 @@ resource "aws_ecs_service" "functions_metrics_service" {
 }
 
 ###########################################
-##### Functions Metrics Auto Scaling ######
+#### AWS Services Metrics Auto Scaling ####
 ###########################################
 
-resource "aws_appautoscaling_target" "functions_metrics_auto_scaling_target" {
+resource "aws_appautoscaling_target" "aws_services_metrics_auto_scaling_target" {
   service_namespace = "ecs"
-  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.functions_metrics_service.name}"
+  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.aws_services_metrics_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
-  role_arn = aws_iam_role.functions_metrics_role.arn
+  role_arn = aws_iam_role.aws_services_metrics_role.arn
   min_capacity = 1
   max_capacity = 2
 }
 
-resource "aws_appautoscaling_policy" "functions_metrics_auto_scaling_up" {
-  depends_on = [aws_appautoscaling_target.functions_metrics_auto_scaling_target]
-  name = "functions-metrics-auto-scaling_up"
+resource "aws_appautoscaling_policy" "aws_services_metrics_auto_scaling_up" {
+  depends_on = [aws_appautoscaling_target.aws_services_metrics_auto_scaling_target]
+  name = "aws-services-metrics-auto-scaling_up"
   service_namespace  = "ecs"
-  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.functions_metrics_service.name}"
+  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.aws_services_metrics_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   step_scaling_policy_configuration {
     adjustment_type = "ChangeInCapacity"
@@ -483,8 +485,8 @@ resource "aws_appautoscaling_policy" "functions_metrics_auto_scaling_up" {
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "functions_metrics_cpu_high_alarm" {
-  alarm_name = "functions-metrics-cpu-high-alarm"
+resource "aws_cloudwatch_metric_alarm" "aws_services_metrics_cpu_high_alarm" {
+  alarm_name = "aws-services-metrics-cpu-high-alarm"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods = "2"
   metric_name = "CPUUtilization"
@@ -494,16 +496,16 @@ resource "aws_cloudwatch_metric_alarm" "functions_metrics_cpu_high_alarm" {
   threshold = "80"
   dimensions = {
     ClusterName = aws_ecs_cluster.ecs_cluster.name
-    ServiceName = aws_ecs_service.functions_metrics_service.name
+    ServiceName = aws_ecs_service.aws_services_metrics_service.name
   }
-  alarm_actions = [aws_appautoscaling_policy.functions_metrics_auto_scaling_up.arn]
+  alarm_actions = [aws_appautoscaling_policy.aws_services_metrics_auto_scaling_up.arn]
 }
 
-resource "aws_appautoscaling_policy" "functions_metrics_auto_scaling_down" {
-  depends_on = [aws_appautoscaling_target.functions_metrics_auto_scaling_target]
-  name = "functions-metrics-auto-scaling-down"
+resource "aws_appautoscaling_policy" "aws_services_metrics_auto_scaling_down" {
+  depends_on = [aws_appautoscaling_target.aws_services_metrics_auto_scaling_target]
+  name = "aws-services-metrics-auto-scaling-down"
   service_namespace  = "ecs"
-  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.functions_metrics_service.name}"
+  resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.aws_services_metrics_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   step_scaling_policy_configuration {
     adjustment_type = "ChangeInCapacity"
@@ -516,8 +518,8 @@ resource "aws_appautoscaling_policy" "functions_metrics_auto_scaling_down" {
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "functions_metrics_cpu_low_alarm" {
-  alarm_name = "functions-metrics-cpu-low-alarm"
+resource "aws_cloudwatch_metric_alarm" "aws_services_metrics_cpu_low_alarm" {
+  alarm_name = "aws-services-metrics-cpu-low-alarm"
   comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods = "5"
   metric_name = "CPUUtilization"
@@ -527,9 +529,9 @@ resource "aws_cloudwatch_metric_alarm" "functions_metrics_cpu_low_alarm" {
   threshold = "10"
   dimensions = {
     ClusterName = aws_ecs_cluster.ecs_cluster.name
-    ServiceName = aws_ecs_service.functions_metrics_service.name
+    ServiceName = aws_ecs_service.aws_services_metrics_service.name
   }
- alarm_actions = [aws_appautoscaling_policy.functions_metrics_auto_scaling_down.arn]
+ alarm_actions = [aws_appautoscaling_policy.aws_services_metrics_auto_scaling_down.arn]
 }
 
 ###########################################
