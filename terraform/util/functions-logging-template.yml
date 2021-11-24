@@ -5,7 +5,7 @@ functionbeat.provider.aws.functions:
   - name: event-handler-logs
     enabled: true
     type: cloudwatch_logs
-    description: "Lambda function for Event Handler API"
+    description: "Collecting logs for the event-handler-function"
     role: ${functions_logging_role_arn}
     processors:
       - add_fields:
@@ -13,12 +13,12 @@ functionbeat.provider.aws.functions:
           fields:
             dataset: event-handler-function
     triggers:
-      - log_group_name: /aws/lambda/event_handler
+      - log_group_name: /aws/lambda/event-handler-function
     
   - name: scoreboard-logs
     enabled: true
     type: cloudwatch_logs
-    description: "Lambda function for Scoreboard API"
+    description: "Collecting logs for the scoreboard-function"
     role: ${functions_logging_role_arn}
     processors:
       - add_fields:
@@ -26,12 +26,12 @@ functionbeat.provider.aws.functions:
           fields:
             dataset: scoreboard-function
     triggers:
-      - log_group_name: /aws/lambda/scoreboard
+      - log_group_name: /aws/lambda/scoreboard-function
 
-  - name: alexa-logs
+  - name: alexa-handler-logs
     enabled: true
     type: cloudwatch_logs
-    description: "Lambda function for Alexa logs"
+    description: "Collecting logs for the alexa-handler-function"
     role: ${functions_logging_role_arn}
     processors:
       - add_fields:
@@ -39,7 +39,7 @@ functionbeat.provider.aws.functions:
           fields:
             dataset: alexa-handler-function
     triggers:
-      - log_group_name: /aws/lambda/alexa_handler
+      - log_group_name: /aws/lambda/alexa-handler-function
 
 setup.template.settings:
   index.number_of_shards: 1
