@@ -6,14 +6,14 @@ resource "aws_vpc" "default" {
   cidr_block = "10.0.0.0/16"
   enable_dns_hostnames = true
   tags = {
-    Name = var.global_prefix
+    Name = "${var.global_prefix}-${random_string.random_string.result}"
   }
 }
 
 resource "aws_internet_gateway" "default" {
   vpc_id = aws_vpc.default.id
   tags = {
-    Name = var.global_prefix
+    Name = "${var.global_prefix}-${random_string.random_string.result}"
   }
 }
 
@@ -21,7 +21,7 @@ resource "aws_eip" "default" {
   depends_on = [aws_internet_gateway.default]
   vpc = true
   tags = {
-    Name = "${var.global_prefix}-default"
+    Name = "${var.global_prefix}-${random_string.random_string.result}"
   }
 }
 
@@ -30,7 +30,7 @@ resource "aws_nat_gateway" "default" {
   allocation_id = aws_eip.default.id
   subnet_id = aws_subnet.public_subnet[0].id
   tags = {
-    Name = var.global_prefix
+    Name = "${var.global_prefix}-${random_string.random_string.result}"
   }
 }
 
@@ -134,27 +134,6 @@ resource "aws_subnet" "cache_server_bastion" {
 ############# Security Groups #############
 ###########################################
 
-resource "aws_security_group" "load_balancer" {
-  name = "${var.global_prefix}-load-balancer"
-  description = "Load Balancer"
-  vpc_id = aws_vpc.default.id
-  ingress {
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  tags = {
-    Name = "${var.global_prefix}-load-balancer"
-  }
-}
-
 resource "aws_security_group" "kafka_cluster" {
   name = "${var.global_prefix}-kafka-cluster"
   description = "Streaming layer using Kafka"
@@ -217,7 +196,6 @@ resource "aws_security_group" "ecs_tasks" {
     protocol = "tcp"
     from_port = 8088
     to_port = 8088
-    security_groups = [aws_security_group.load_balancer.id]
   }
   egress {
     from_port = 0

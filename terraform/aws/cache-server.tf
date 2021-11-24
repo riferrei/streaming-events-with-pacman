@@ -3,13 +3,13 @@
 ###########################################
 
 resource "aws_elasticache_subnet_group" "cache_server" {
-  name = "${var.global_prefix}-cache-server"
+  name = "${var.global_prefix}-${random_string.random_string.result}"
   subnet_ids = aws_subnet.private_subnet[*].id
   description = "${var.global_prefix}-cache-server"
 }
 
 resource "aws_elasticache_replication_group" "cache_server" {
-  replication_group_id = "${var.global_prefix}-cache-server"
+  replication_group_id = "${var.global_prefix}-${random_string.random_string.result}"
   replication_group_description = "Cache server for the APIs"
   subnet_group_name = aws_elasticache_subnet_group.cache_server.name
   availability_zones = data.aws_availability_zones.available.names

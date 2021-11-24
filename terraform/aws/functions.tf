@@ -191,7 +191,7 @@ resource "aws_lambda_function" "event_handler_function" {
     null_resource.event_handler_function_build,
     aws_iam_role.event_handler_role,
     aws_s3_bucket.pacman]
-  function_name = "event_handler"
+  function_name = "event-handler-function"
   description = "Backend function for the Event Handler API"
   filename = "../../functions/event-handler-function/deploy/event-handler-function-1.0.jar"
   handler = "com.riferrei.streaming.pacman.EventHandler"
@@ -403,7 +403,7 @@ resource "aws_lambda_function" "scoreboard_function" {
     aws_elasticache_replication_group.cache_server,
     ec_deployment.elasticsearch,
     aws_s3_bucket.pacman]
-  function_name = "scoreboard"
+  function_name = "scoreboard-function"
   description = "Backend function for the Scoreboard API"
   filename = "../../functions/scoreboard-function/deploy/scoreboard-function-1.0.jar"
   handler = "com.riferrei.streaming.pacman.Scoreboard::handleRequest"
@@ -511,7 +511,7 @@ resource "aws_lambda_function" "alexa_handler_function" {
     aws_iam_role.alexa_handler_role,
     aws_elasticache_replication_group.cache_server,
     ec_deployment.elasticsearch]
-  function_name = "alexa_handler"
+  function_name = "alexa-handler-function"
   description = "Backend function for the Alexa Handler API"
   filename = "../../functions/alexa-handler-function/deploy/alexa-handler-function-1.0.jar"
   handler = "com.riferrei.streaming.pacman.AlexaHandler::handleRequest"

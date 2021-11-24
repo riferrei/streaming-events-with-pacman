@@ -8,7 +8,7 @@ resource "aws_cloudwatch_log_group" "kafka_cluster_log_group" {
 
 resource "aws_msk_cluster" "kafka_cluster" {
 
-  cluster_name = "${var.global_prefix}-kafka-cluster"
+  cluster_name = "${var.global_prefix}-${random_string.random_string.result}"
   kafka_version = "2.8.0"
   number_of_broker_nodes = 3
 
@@ -49,7 +49,7 @@ resource "aws_msk_cluster" "kafka_cluster" {
   }
 
   tags = {
-    name = "${var.global_prefix}-kafka-cluster"
+    name = var.global_prefix
   }
 
 }

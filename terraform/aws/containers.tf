@@ -3,7 +3,7 @@
 ###########################################
 
 resource "aws_ecs_cluster" "ecs_cluster" {
-  name = "${var.global_prefix}-cluster"
+  name = "${var.global_prefix}-${random_string.random_string.result}"
 }
 
 ###########################################
@@ -48,7 +48,7 @@ POLICY
 }
 
 resource "aws_iam_role" "ksqldb_server_role" {
-  name = "ksqldb_server_role"
+  name = "ksqldb-server-role"
   assume_role_policy = data.aws_iam_policy_document.ksqldb_server_policy_document.json
 }
 
@@ -76,7 +76,7 @@ data "template_file" "ksqldb_server_definition" {
 }
 
 resource "aws_ecs_task_definition" "ksqldb_server_task" {
-  family = "ksqldb_server_task"
+  family = "ksqldb-server-task"
   network_mode = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu = "4096"  
@@ -117,7 +117,7 @@ resource "aws_appautoscaling_target" "ksqldb_server_auto_scaling_target" {
 
 resource "aws_appautoscaling_policy" "ksqldb_server_auto_scaling_up" {
   depends_on = [aws_appautoscaling_target.ksqldb_server_auto_scaling_target]
-  name = "ksqldb_server_auto_scaling_up"
+  name = "ksqldb-server-auto-scaling-up"
   service_namespace  = "ecs"
   resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.ksqldb_server_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -150,7 +150,7 @@ resource "aws_cloudwatch_metric_alarm" "ksqldb_server_cpu_high_alarm" {
 
 resource "aws_appautoscaling_policy" "ksqldb_server_auto_scaling_down" {
   depends_on = [aws_appautoscaling_target.ksqldb_server_auto_scaling_target]
-  name = "ksqldb_server_auto_scaling_down"
+  name = "ksqldb-server-auto-scaling-down"
   service_namespace  = "ecs"
   resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.ksqldb_server_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -166,7 +166,7 @@ resource "aws_appautoscaling_policy" "ksqldb_server_auto_scaling_down" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "ksqldb_server_cpu_low_alarm" {
-  alarm_name = "ksqldb_server_cpu_low_alarm"
+  alarm_name = "ksqldb-server-cpu-low-alarm"
   comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods = "5"
   metric_name = "CPUUtilization"
@@ -223,7 +223,7 @@ POLICY
 }
 
 resource "aws_iam_role" "redis_sink_role" {
-  name = "redis_sink_role"
+  name = "redis-sink-role"
   assume_role_policy = data.aws_iam_policy_document.redis_sink_policy_document.json
 }
 
@@ -258,7 +258,7 @@ data "template_file" "redis_sink_definition" {
 }
 
 resource "aws_ecs_task_definition" "redis_sink_task" {
-  family = "redis_sink_task"
+  family = "redis-sink-task"
   network_mode = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu = "4096"
@@ -300,7 +300,7 @@ resource "aws_appautoscaling_target" "redis_sink_auto_scaling_target" {
 
 resource "aws_appautoscaling_policy" "redis_sink_auto_scaling_up" {
   depends_on = [aws_appautoscaling_target.redis_sink_auto_scaling_target]
-  name = "redis_sink_auto_scaling_up"
+  name = "redis-sink-auto-scaling-up"
   service_namespace  = "ecs"
   resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.redis_sink_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -316,7 +316,7 @@ resource "aws_appautoscaling_policy" "redis_sink_auto_scaling_up" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "redis_sink_cpu_high_alarm" {
-  alarm_name = "redis_sink_cpu_high_alarm"
+  alarm_name = "redis-sink-cpu-high-alarm"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods = "2"
   metric_name = "CPUUtilization"
@@ -333,7 +333,7 @@ resource "aws_cloudwatch_metric_alarm" "redis_sink_cpu_high_alarm" {
 
 resource "aws_appautoscaling_policy" "redis_sink_auto_scaling_down" {
   depends_on = [aws_appautoscaling_target.redis_sink_auto_scaling_target]
-  name = "redis_sink_auto_scaling_down"
+  name = "redis-sink-auto-scaling-down"
   service_namespace  = "ecs"
   resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.redis_sink_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -349,7 +349,7 @@ resource "aws_appautoscaling_policy" "redis_sink_auto_scaling_down" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "redis_sink_cpu_low_alarm" {
-  alarm_name = "redis_sink_cpu_low_alarm"
+  alarm_name = "redis-sink-cpu-low-alarm"
   comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods = "5"
   metric_name = "CPUUtilization"
@@ -406,7 +406,7 @@ POLICY
 }
 
 resource "aws_iam_role" "functions_metrics_role" {
-  name = "functions_metrics_role"
+  name = "functions-metrics-role"
   assume_role_policy = data.aws_iam_policy_document.functions_metrics_policy_document.json
 }
 
@@ -428,7 +428,7 @@ data "template_file" "functions_metrics_definition" {
 }
 
 resource "aws_ecs_task_definition" "functions_metrics_task" {
-  family = "functions_metrics_task"
+  family = "functions-metrics-task"
   network_mode = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu = "4096"
@@ -468,7 +468,7 @@ resource "aws_appautoscaling_target" "functions_metrics_auto_scaling_target" {
 
 resource "aws_appautoscaling_policy" "functions_metrics_auto_scaling_up" {
   depends_on = [aws_appautoscaling_target.functions_metrics_auto_scaling_target]
-  name = "functions_metrics_auto_scaling_up"
+  name = "functions-metrics-auto-scaling_up"
   service_namespace  = "ecs"
   resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.functions_metrics_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -484,7 +484,7 @@ resource "aws_appautoscaling_policy" "functions_metrics_auto_scaling_up" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "functions_metrics_cpu_high_alarm" {
-  alarm_name = "functions_metrics_cpu_high_alarm"
+  alarm_name = "functions-metrics-cpu-high-alarm"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods = "2"
   metric_name = "CPUUtilization"
@@ -501,7 +501,7 @@ resource "aws_cloudwatch_metric_alarm" "functions_metrics_cpu_high_alarm" {
 
 resource "aws_appautoscaling_policy" "functions_metrics_auto_scaling_down" {
   depends_on = [aws_appautoscaling_target.functions_metrics_auto_scaling_target]
-  name = "functions_metrics_auto_scaling_down"
+  name = "functions-metrics-auto-scaling-down"
   service_namespace  = "ecs"
   resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.functions_metrics_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -517,7 +517,7 @@ resource "aws_appautoscaling_policy" "functions_metrics_auto_scaling_down" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "functions_metrics_cpu_low_alarm" {
-  alarm_name = "functions_metrics_cpu_low_alarm"
+  alarm_name = "functions-metrics-cpu-low-alarm"
   comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods = "5"
   metric_name = "CPUUtilization"
@@ -574,7 +574,7 @@ POLICY
 }
 
 resource "aws_iam_role" "endpoints_availability_role" {
-  name = "endpoints_availability_role"
+  name = "endpoints-availability-role"
   assume_role_policy = data.aws_iam_policy_document.endpoints_availability_policy_document.json
 }
 
@@ -597,7 +597,7 @@ data "template_file" "endpoints_availability_definition" {
 }
 
 resource "aws_ecs_task_definition" "endpoints_availability_task" {
-  family = "endpoints_availability_task"
+  family = "endpoints-availability-task"
   network_mode = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu = "4096"
@@ -611,7 +611,7 @@ resource "aws_ecs_service" "endpoints_availability_service" {
   depends_on = [
     aws_nat_gateway.default,
     ec_deployment.elasticsearch]
-  name = "endpoints_availability-service"
+  name = "endpoints-availability-service"
   cluster = aws_ecs_cluster.ecs_cluster.id
   task_definition = aws_ecs_task_definition.endpoints_availability_task.arn
   desired_count = 1
@@ -637,7 +637,7 @@ resource "aws_appautoscaling_target" "endpoints_availability_auto_scaling_target
 
 resource "aws_appautoscaling_policy" "endpoints_availability_auto_scaling_up" {
   depends_on = [aws_appautoscaling_target.endpoints_availability_auto_scaling_target]
-  name = "endpoints_availability_auto_scaling_up"
+  name = "endpoints-availability-auto-scaling-up"
   service_namespace  = "ecs"
   resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.endpoints_availability_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -653,7 +653,7 @@ resource "aws_appautoscaling_policy" "endpoints_availability_auto_scaling_up" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "endpoints_availability_cpu_high_alarm" {
-  alarm_name = "endpoints_availability_cpu_high_alarm"
+  alarm_name = "endpoints-availability-cpu-high-alarm"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods = "2"
   metric_name = "CPUUtilization"
@@ -670,7 +670,7 @@ resource "aws_cloudwatch_metric_alarm" "endpoints_availability_cpu_high_alarm" {
 
 resource "aws_appautoscaling_policy" "endpoints_availability_auto_scaling_down" {
   depends_on = [aws_appautoscaling_target.endpoints_availability_auto_scaling_target]
-  name = "endpoints_availability_auto_scaling_down"
+  name = "endpoints-availability-auto-scaling-down"
   service_namespace  = "ecs"
   resource_id = "service/${aws_ecs_cluster.ecs_cluster.name}/${aws_ecs_service.endpoints_availability_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
@@ -686,7 +686,7 @@ resource "aws_appautoscaling_policy" "endpoints_availability_auto_scaling_down" 
 }
 
 resource "aws_cloudwatch_metric_alarm" "endpoints_availability_cpu_low_alarm" {
-  alarm_name = "endpoints_availability_cpu_low_alarm"
+  alarm_name = "endpoints-availability-cpu-low-alarm"
   comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods = "5"
   metric_name = "CPUUtilization"

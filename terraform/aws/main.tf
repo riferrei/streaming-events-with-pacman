@@ -26,6 +26,14 @@ variable "aws_secret_access_key" {
 ############ Custom Variables #############
 ###########################################
 
+resource "random_string" "random_string" {
+  length = 8
+  special = false
+  upper = false
+  lower = true
+  number = false
+}
+
 variable "aws_region" {
   type = string
   default = "us-east-1"

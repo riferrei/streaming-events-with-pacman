@@ -3,6 +3,7 @@ var SCOREBOARD_API = "${scoreboard_api}"
 
 function loadHighestScore(callback) {
 
+	var highestScore = 0;
 	const request = new XMLHttpRequest();
 	request.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
@@ -13,7 +14,10 @@ function loadHighestScore(callback) {
 				if (b.score > a.score) res = -1;
 				return res * -1;
 			});;
-			callback(highestScoreResult[0].score);
+			if (highestScoreResult.length > 0) {
+				highestScore = highestScoreResult[0].score;
+			}
+			callback(highestScore);
 		}
 	};
 	

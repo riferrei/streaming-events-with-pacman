@@ -1,3 +1,7 @@
+###########################################
+############## Elastic O11y ###############
+###########################################
+
 terraform {
   required_version = ">= 0.12.29"
   required_providers {
@@ -18,7 +22,7 @@ data "ec_stack" "latest" {
 }
 
 resource "ec_deployment" "elasticsearch" {
-  name = var.global_prefix
+  name = "${var.global_prefix}-${random_string.random_string.result}"
   deployment_template_id = "aws-io-optimized-v2"
   region = data.ec_stack.latest.region
   version = data.ec_stack.latest.version

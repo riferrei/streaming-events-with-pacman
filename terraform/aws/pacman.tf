@@ -2,16 +2,14 @@
 ################## HTML ###################
 ###########################################
 
-resource "random_string" "random_string" {
-  length = 8
-  special = false
-  upper = false
-  lower = true
-  number = false
+/* Uncomment this version for unique bucket
+data "template_file" "bucket_pacman" {
+  template = "${var.global_prefix}-${random_string.random_string.result}"
 }
+*/
 
 data "template_file" "bucket_pacman" {
-  template = "${var.global_prefix}"
+  template = var.global_prefix
 }
 
 resource "aws_s3_bucket" "pacman" {
