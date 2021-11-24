@@ -39,8 +39,7 @@ terraform apply
 ----
 Outputs:
 
-ksqlDB = http://streaming-pacman00000-ksqldb.region.elb.amazonaws.com
-Pacman = http://streaming-pacman00000.s3-website-region.amazonaws.com
+Pacman = http://<UNIQUE_NAME>.s3-website-region.amazonaws.com
 ----
 
 *Note:* When you are done with the application, you can automatically destroy all the resources created by Terraform using the command below:
