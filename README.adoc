@@ -2,25 +2,15 @@
 
 :imagesdir: images/
 
-This applications allows you to practice how to use https://www.elastic.co/observability[Elastic Observability] with services from AWS. It has been built using principles of data streaming using https://kafka.apache.org[Apache Kafka]. Built around a game this application ingest and store events from the game into Kafka topics and allow you to process them in near real-time using https://ksqldb.io/[ksqlDB]. In order to keep you focused in the application details this project is based on several fully managed services from AWS such as https://aws.amazon.com/msk[Managed Streaming for Apache Kafka], https://aws.amazon.com/elasticache/redis[ElastiCache for Redis], and https://aws.amazon.com/ecs[Elastic Container Service] that does the infrastructure heavy lifting for you.
-
-To implement streaming analytics in the game you are going to build a link:pipeline/queries.sql[scoreboard using ksqlDB]. The scoreboard will be a table containing aggregated metrics of the players such as their highest score, the highest level achieved, and the number of times that the player loses. As new events arrive the scoreboard gets instantly updated by the continuous queries that keep processing those events as they happen.
+This application allows you to practice how to use https://www.elastic.co/observability[Elastic Observability] to monitor services from AWS. It has been built using principles of data streaming using https://kafka.apache.org[Apache Kafka]. Built around the Pac-Man game this application ingest and store events from the game into Kafka topics and processes them in near real-time using https://ksqldb.io/[ksqlDB]. In order to keep you focused in the application details this project is based on several fully managed services from AWS such as https://aws.amazon.com/msk[Managed Streaming for Apache Kafka], https://aws.amazon.com/elasticache/redis[ElastiCache for Redis], and https://aws.amazon.com/ecs[Elastic Container Service] that does the infrastructure heavy lifting for you.
 
 == What you are going to need?
 
 * *Terraform* - The application is automatically created using https://www.terraform.io[Terraform]. Besides having Terraform installed locally, you will need to provide your AWS credentials so Terraform can create and manage the resources for you.
 
-* *Java and Maven* - The UI layer of the application relies on two APIs that are implemented using https://openjdk.java.net/[Java], therefore you will need to have Java 11+ installed to build the source-code. The build itseld is implemented using https://maven.apache.org/[Maven], and it is triggered automatically by Terraform.
-
-* *Docker (Optional)* - The backend of some of the APIs is based on Redis. In order to keep Redis up-to-date with the data stored in Kafka, the application uses a sink service implemented as a Docker application. Its Docker image has been published on https://hub.docker.com/r/riferrei/redis-sink[Docker Hub] so there is no need for you to worry about this. However, if you want to use your own Docker image -- you will need to build a new image using this link:redis-sink/[code] and push it to some Docker repository. Also, you will need to modify the Terraform variable named `redis_sink_image`.
+* *Java and Maven* - Three APIs will be created and are backed by Lambda functions written in https://openjdk.java.net/[Java], therefore you will need to have Java 11+ installed to build the source-code. The build itseld is implemented using https://maven.apache.org/[Maven], and it is triggered automatically by Terraform.
 
 == Deploying the application
-
-The application is essentially a set of link:pacman/[HTML/CSS/JS files] that forms a microsite that can be hosted statically anywhere. But for the sake of coolness we will deploy this microsite in a S3 bucket from AWS. The application will emit events that will be processed by a event handler implemented as an API Gateway which uses a Lambda function as backend. This event handler API receives the events and writes them into the respective Kafka topics.
-
-image::pac-man-arch.png[align="left"]
-
-Please note that during deployment, the API takes care of creating the required Kafka topics. Therefore, there is no need to manually create them.
 
 1. Enter the folder that contains the AWS code
 +
