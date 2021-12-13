@@ -84,6 +84,10 @@ resource "aws_ecs_task_definition" "ksqldb_server_task" {
   execution_role_arn = aws_iam_role.ksqldb_server_role.arn
   task_role_arn = aws_iam_role.ksqldb_server_role.arn
   container_definitions = data.template_file.ksqldb_server_definition.rendered
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture = "ARM64"
+  }
 }
 
 resource "aws_ecs_service" "ksqldb_server_service" {
@@ -266,6 +270,10 @@ resource "aws_ecs_task_definition" "redis_sink_task" {
   execution_role_arn = aws_iam_role.redis_sink_role.arn
   task_role_arn = aws_iam_role.redis_sink_role.arn
   container_definitions = data.template_file.redis_sink_definition.rendered
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture = "ARM64"
+  }
 }
 
 resource "aws_ecs_service" "redis_sink_service" {
@@ -438,6 +446,10 @@ resource "aws_ecs_task_definition" "aws_services_metrics_task" {
   execution_role_arn = aws_iam_role.aws_services_metrics_role.arn
   task_role_arn = aws_iam_role.aws_services_metrics_role.arn
   container_definitions = data.template_file.aws_services_metrics_definition.rendered
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture = "ARM64"
+  }
 }
 
 resource "aws_ecs_service" "aws_services_metrics_service" {
@@ -607,6 +619,10 @@ resource "aws_ecs_task_definition" "endpoints_availability_task" {
   execution_role_arn = aws_iam_role.endpoints_availability_role.arn
   task_role_arn = aws_iam_role.endpoints_availability_role.arn
   container_definitions = data.template_file.endpoints_availability_definition.rendered
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture = "ARM64"
+  }
 }
 
 resource "aws_ecs_service" "endpoints_availability_service" {

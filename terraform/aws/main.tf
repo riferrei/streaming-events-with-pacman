@@ -2,6 +2,20 @@
 ################## AWS ####################
 ###########################################
 
+terraform {
+  required_version = ">= 0.12.29"
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = ">= 3.69.0"
+    }
+    ec = {
+      source = "elastic/ec"
+      version = "0.3.0"
+    }
+  }
+}
+
 provider "aws" {
   region = var.aws_region
 }
