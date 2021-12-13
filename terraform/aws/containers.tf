@@ -86,7 +86,7 @@ resource "aws_ecs_task_definition" "ksqldb_server_task" {
   container_definitions = data.template_file.ksqldb_server_definition.rendered
   runtime_platform {
     operating_system_family = "LINUX"
-    cpu_architecture = "ARM64"
+    cpu_architecture = "X86_64"
   }
 }
 
@@ -252,8 +252,8 @@ data "template_file" "redis_sink_definition" {
     group_id = "${var.global_prefix}-${uuid()}-redis-sink"
     redis_host = aws_elasticache_replication_group.cache_server.primary_endpoint_address
     redis_port = aws_elasticache_replication_group.cache_server.port
-    logs_region = data.aws_region.current.name
     metricbeat_image = var.metricbeat_image
+    logs_region = data.aws_region.current.name
     aws_access_key_id = var.aws_access_key_id
     aws_secret_access_key = var.aws_secret_access_key
     cloud_id = ec_deployment.elasticsearch.elasticsearch[0].cloud_id
@@ -272,7 +272,7 @@ resource "aws_ecs_task_definition" "redis_sink_task" {
   container_definitions = data.template_file.redis_sink_definition.rendered
   runtime_platform {
     operating_system_family = "LINUX"
-    cpu_architecture = "ARM64"
+    cpu_architecture = "X86_64"
   }
 }
 
